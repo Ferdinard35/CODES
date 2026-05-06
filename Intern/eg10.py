@@ -1,0 +1,5 @@
+print("GPS COORDINATOR VIEWER")
+print("Displaying GPS coordinates: (latitude, longitude)")
+GPS_COORDINATOR = (40.7128, 74.0060)
+print(f"GPS Coordinates: {GPS_COORDINATOR[0]}")
+print(f"GPS Coordinates: {GPS_COORDINATOR[1]}")
