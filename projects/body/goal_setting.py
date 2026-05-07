@@ -1,6 +1,9 @@
+from dataclasses import field
+from wsgiref.validate import validator
+
 from PySide6.QtWidgets import QWidget, QVBoxLayout, QLabel, QLineEdit, QPushButton, QMessageBox
 import database
-
+from PySide6.QtGui import QDoubleValidator
 
 class GoalSettingPage(QWidget):
     def __init__(self):
@@ -22,6 +25,9 @@ class GoalSettingPage(QWidget):
         self.layout.addWidget(QLabel(label))
         field = QLineEdit()
         self.layout.addWidget(field)
+        validator = QDoubleValidator(0.0, 500.0, 2)
+        field.setValidator(validator)
+        field.setPlaceholderText("0.0")
         return field
 
     def save_goals(self):
@@ -32,7 +38,7 @@ class GoalSettingPage(QWidget):
                 float(self.chest.text() or 0)
             )
             QMessageBox.information(self, "Saved", "Goals updated!")
-        except:
+        except ValueError:
             QMessageBox.warning(self, "Error", "Invalid input")
 
     def refresh_goals(self):

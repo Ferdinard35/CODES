@@ -119,6 +119,68 @@ class MainWindow(QMainWindow):
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
+    app.setStyleSheet("""
+    /* Main Window Background - A deep Navy/Slate instead of pure black */
+    QMainWindow {
+        background: qlineargradient(x1:0, y1:0, x2:1, y2:1, 
+                                    stop:0 #2c3e50, stop:1 #000000);
+    }
+
+    /* The Table Design */
+    QTableWidget {
+        background-color: rgba(255, 255, 255, 15); /* Semi-transparent white */
+        alternate-background-color: rgba(255, 255, 255, 5);
+        color: #ffffff;
+        gridline-color: #3498db;
+        border: 2px solid #3498db;
+        border-radius: 10px;
+        font-size: 14px;
+        selection-background-color: #e74c3c; /* Bright red/orange when you click a row */
+    }
+
+    /* Table Headers - Electric Blue */
+    QHeaderView::section {
+        background-color: #3498db;
+        color: white;
+        padding: 8px;
+        font-weight: bold;
+        border-top-left-radius: 5px;
+        border-top-right-radius: 5px;
+        border: 1px solid #2980b9;
+    }
+
+    /* Buttons - Gradient from Blue to Purple */
+    QPushButton {
+        background: qlineargradient(x1:0, y1:0, x2:1, y2:0, 
+                                    stop:0 #3498db, stop:1 #9b59b6);
+        color: white;
+        border-radius: 15px;
+        padding: 10px;
+        font-weight: bold;
+        min-width: 80px;
+    }
+    
+    QPushButton:hover {
+        background: qlineargradient(x1:0, y1:0, x2:1, y2:0, 
+                                    stop:0 #2980b9, stop:1 #8e44ad);
+    }
+
+    /* Labels / Text */
+    QLabel {
+        color: #ecf0f1;
+        font-size: 16px;
+        font-family: 'Segoe UI', sans-serif;
+    }
+
+    /* Entry Inputs */
+    QLineEdit {
+        background-color: #ffffff;
+        color: #2c3e50;
+        border: 2px solid #3498db;
+        border-radius: 5px;
+        padding: 5px;
+    }
+""")
     window = MainWindow()
     window.show()
     sys.exit(app.exec())
