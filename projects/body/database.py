@@ -73,7 +73,7 @@ def add_weight_entry(date, weight, waist, chest, arms):
     bmi = 0
 
     if height_cm > 0:
-        height_m = height_cm / 100  # 🔥 FIX: convert cm → meters
+        height_m = height_cm / 100  #convert cm → meters
         bmi = round(weight / (height_m ** 2), 2)
 
     with create_connection() as conn:
@@ -83,19 +83,19 @@ def add_weight_entry(date, weight, waist, chest, arms):
             VALUES (?, ?, ?, ?, ?, ?)
         """, (date, weight, waist, chest, arms, bmi))
 
-
 def get_latest_entry():
     with create_connection() as conn:
         cursor = conn.cursor()
-        cursor.execute("SELECT * FROM entries ORDER BY date DESC LIMIT 1")
+        # Sort by ID instead of date to guarantee the absolute newest entry shows up
+        cursor.execute("SELECT * FROM entries ORDER BY id DESC LIMIT 1")
         return cursor.fetchone()
 
-
 def get_all_entries():
-    """For charts"""
+    """For charts - must be ASCENDING to draw the line correctly"""
     with create_connection() as conn:
         cursor = conn.cursor()
-        cursor.execute("SELECT date, weight FROM entries ORDER BY date ASC")
+        # Sorting by ID ensures the chart draws from oldest to newest
+        cursor.execute("SELECT date, weight FROM entries ORDER BY id ASC")
         return cursor.fetchall()
 
 
