@@ -5,23 +5,28 @@ import database
 
 
 class Dashboard(QWidget):
+
     def __init__(self):
         super().__init__()
 
-        self.setWindowTitle("Body Transformation Dashboard")
+        self.setWindowTitle("Weight tracker")
         self.setMinimumSize(400, 500)
 
         self.main_layout = QVBoxLayout(self)
         self.main_layout.setSpacing(20)
         self.main_layout.setContentsMargins(20, 20, 20, 20)
 
-        # Welcome Header
+        
+        # WELCOME HEADER
+        
         self.welcome_label = QLabel("Welcome Back 👋")
         self.welcome_label.setFont(QFont("Arial", 18, QFont.Bold))
         self.welcome_label.setAlignment(Qt.AlignCenter)
         self.main_layout.addWidget(self.welcome_label)
 
-        # Stats Frame
+        
+        # STATS FRAME
+       
         self.stats_frame = QFrame()
         self.stats_frame.setStyleSheet("""
             QFrame {
@@ -58,7 +63,8 @@ class Dashboard(QWidget):
 
         self.main_layout.addWidget(self.stats_frame)
 
-        # Measurements
+        # MEASUREMENTS
+        
         self.measure_label = QLabel("Latest Measurements")
         self.measure_label.setFont(QFont("Arial", 14, QFont.Bold))
         self.main_layout.addWidget(self.measure_label)
@@ -70,6 +76,9 @@ class Dashboard(QWidget):
 
         self.refresh_dashboard()
 
+  
+    # BMI STATUS
+    
     def get_bmi_status(self, bmi):
         if bmi < 18.5:
             return "Underweight", "#E67E22"
@@ -80,34 +89,49 @@ class Dashboard(QWidget):
         else:
             return "Obese", "#C0392B"
 
+    
+    # REFRESH DASHBOARD
     def refresh_dashboard(self):
-        latest = database.get_latest_entry()
-        target = database.get_current_goal()
-        measurements = database.get_latest_measurements()
 
-        if not latest:
-            self.weight_display.setText("-- kg")
-            self.bmi_label.setText("BMI: --")
-            self.status_label.setText("No entries yet")
-            self.goal_label.setText("No Goal Set")
-            self.measure_info.setText("Waist: -- | Chest: -- | Arms: --")
-            return
+     latest = database.get_latest_entry()
+     target = database.get_current_goal()
+     measurements = database.get_latest_measurements()
 
+     # RESET UI EVERY TIME (IMPORTANT FIX)
+     self.status_label.setStyleSheet("")  # reset style
+
+     if not latest:
+        self.weight_display.setText("-- kg")
+        self.bmi_label.setText("BMI: --")
+        self.status_label.setText("No entries yet")
+        self.goal_label.setText("No Goal Set")
+        self.measure_info.setText("Waist: -- | Chest: -- | Arms: --")
+        return
+
+     try:
         current_weight, bmi = latest
 
         self.weight_display.setText(f"{current_weight} kg")
         self.bmi_label.setText(f"BMI: {bmi}")
 
-        if bmi:
-            status, color = self.get_bmi_status(float(bmi))
+        bmi_value = float(bmi)
+        status, color = self.get_bmi_status(bmi_value)
 
-            self.status_label.setText(f"STATUS: {status}")
-            self.status_label.setStyleSheet(
-                f"color: {color}; font-weight: bold; font-size: 18px;"
-            )
+        self.status_label.setText(f"STATUS: {status}")
+        self.status_label.setStyleSheet(
+            f"color: {color}; font-weight: bold; font-size: 18px;"
+        )
 
-        if target:
-            if float(current_weight) <= float(target):
+     except Exception:
+        self.status_label.setText("STATUS: Unknown")
+
+     # GOAL
+     try:
+        if target is not None:
+            target_val = float(target)
+            weight_val = float(current_weight)
+
+            if weight_val <= target_val:
                 self.goal_label.setText("🎉 GOAL REACHED")
                 self.goal_label.setStyleSheet("""
                     background-color: #27ae60;
@@ -116,21 +140,31 @@ class Dashboard(QWidget):
                     border-radius: 5px;
                 """)
             else:
-                remaining = round(float(current_weight) - float(target), 1)
+                remaining = round(weight_val - target_val, 1)
                 self.goal_label.setText(
-                    f"Target: {target} kg | Remaining: {remaining} kg"
+                    f"Target: {target_val} kg | Remaining: {remaining} kg"
                 )
-                self.goal_label.setStyleSheet(
-                    "color: #bdc3c7; font-weight: bold;"
-                )
+                self.goal_label.setStyleSheet("color: #bdc3c7; font-weight: bold;")
 
-        if measurements:
-            waist, chest, arms = measurements
+     except Exception:
+        self.goal_label.setText("Goal data error")
+
+     # MEASUREMENTS (SAFE FIX)
+     if measurements and len(measurements) >= 3:
+        try:
+            waist = measurements[0]
+            chest = measurements[1]
+            arms = measurements[2]
 
             self.measure_info.setText(
                 f"Waist: {waist} cm | Chest: {chest} cm | Arms: {arms} cm"
             )
+        except:
+            self.measure_info.setText("Measurement data error")
 
+    
+    # AUTO REFRESH
+    
     def showEvent(self, event):
         self.refresh_dashboard()
         super().showEvent(event)

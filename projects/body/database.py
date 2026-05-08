@@ -3,10 +3,14 @@ import sqlite3
 DB_NAME = "tracker.db"
 
 
-def create_connection():
-    conn = sqlite3.connect(DB_NAME)
-    return conn
 
+# CONNECTION
+def create_connection():
+    return sqlite3.connect(DB_NAME)
+
+
+
+# INIT DB
 
 def init_db():
     with create_connection() as conn:
@@ -45,6 +49,7 @@ def init_db():
         conn.commit()
 
 
+
 # USER
 
 def save_user_profile(name, age, height):
@@ -63,22 +68,22 @@ def save_user_profile(name, age, height):
         conn.commit()
 
 
-
 def get_user_profile():
     with create_connection() as conn:
         cursor = conn.cursor()
 
-        cursor.execute(
-            "SELECT name, age, height FROM users LIMIT 1"
-        )
-
+        cursor.execute("SELECT name, age, height FROM users LIMIT 1")
         return cursor.fetchone()
-
 
 
 def get_user_height():
     user = get_user_profile()
-    return user[2] if user and user[2] else 0
+
+    try:
+        return float(user[2]) if user and user[2] else 0
+    except:
+        return 0
+
 
 
 # ENTRIES
@@ -103,6 +108,17 @@ def add_weight_entry(date, weight, waist, chest, arms):
         conn.commit()
 
 
+def entry_exists(date):
+    with create_connection() as conn:
+        cursor = conn.cursor()
+
+        cursor.execute(
+            "SELECT 1 FROM entries WHERE date = ? LIMIT 1",
+            (date,)
+        )
+
+        return cursor.fetchone() is not None
+
 
 def get_latest_entry():
     with create_connection() as conn:
@@ -116,7 +132,6 @@ def get_latest_entry():
         """)
 
         return cursor.fetchone()
-
 
 
 def get_latest_measurements():
@@ -133,29 +148,30 @@ def get_latest_measurements():
         return cursor.fetchone()
 
 
-
 def get_all_entries():
     with create_connection() as conn:
         cursor = conn.cursor()
 
+        # FIX: order by date instead of id (IMPORTANT FOR CHART)
         cursor.execute("""
             SELECT date, weight
             FROM entries
-            ORDER BY id ASC
+            ORDER BY date ASC
         """)
 
         return cursor.fetchall()
-
 
 
 def get_all_history():
     with create_connection() as conn:
         cursor = conn.cursor()
 
-        cursor.execute("SELECT * FROM entries ORDER BY id DESC")
+        cursor.execute("""
+            SELECT * FROM entries
+            ORDER BY id DESC
+        """)
 
         return cursor.fetchall()
-
 
 
 def delete_entry(entry_id):
@@ -168,6 +184,7 @@ def delete_entry(entry_id):
         )
 
         conn.commit()
+
 
 
 # GOALS
@@ -189,7 +206,6 @@ def save_goals(weight, waist, chest):
         conn.commit()
 
 
-
 def get_goals():
     with create_connection() as conn:
         cursor = conn.cursor()
@@ -203,18 +219,15 @@ def get_goals():
         return cursor.fetchone()
 
 
-
+# FIXED: consistent return (VERY IMPORTANT)
 def get_current_goal():
-    with create_connection() as conn:
-        cursor = conn.cursor()
+    goals = get_goals()
 
-        cursor.execute("""
-            SELECT target_weight
-            FROM goals
-            ORDER BY id DESC
-            LIMIT 1
-        """)
+    if not goals:
+        return None
 
-        row = cursor.fetchone()
-
-        return row[0] if row else None
+    return {
+        "weight": goals[0],
+        "waist": goals[1],
+        "chest": goals[2]
+    }
