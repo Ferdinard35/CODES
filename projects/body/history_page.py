@@ -28,7 +28,7 @@ class HistoryPage(QWidget):
             "ID", "Date", "Weight (kg)", "Waist (cm)",
             "Chest (cm)", "Arms (cm)", "BMI"
         ])
-
+        
         self.table.setColumnHidden(0, True)
 
         header = self.table.horizontalHeader()
