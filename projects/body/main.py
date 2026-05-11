@@ -1,9 +1,12 @@
 import sys
+
 from PySide6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QHBoxLayout,
-    QPushButton, QStackedWidget, QFrame, QVBoxLayout
+    QPushButton, QStackedWidget, QFrame, QVBoxLayout, QLabel
 )
+
 from PySide6.QtGui import QFont
+from PySide6.QtCore import Qt
 
 from dashboard import Dashboard
 from add_entry import AddEntryPage
@@ -11,6 +14,7 @@ from history_page import HistoryPage
 from settings_page import SettingsPage
 from goal_setting import GoalSettingPage
 from chart_page import ChartPage
+
 from stylesheet import apply_styles
 import database
 
@@ -20,30 +24,51 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
 
-        self.setWindowTitle("Weight Tracker")
-        self.setMinimumSize(900, 600)
+        self.setWindowTitle("Fitness  Tracker")
+        self.setMinimumSize(1200, 750)
 
         database.init_db()
 
-        # MAIN WIDGET
+
+        # CENTRAL
+       
+
         central = QWidget()
         self.setCentralWidget(central)
+
         self.layout = QHBoxLayout(central)
+        self.layout.setContentsMargins(0, 0, 0, 0)
+        self.layout.setSpacing(0)
 
         
-        # SIDEBAR
-        
+        # SIDEBAR 
+       
+
         self.sidebar = QFrame()
-        self.sidebar.setFixedWidth(180)
-        self.sidebar_layout = QVBoxLayout(self.sidebar)
+        self.sidebar.setObjectName("sidebar")
+        self.sidebar.setFixedWidth(240)
 
-        self.buttons = []
+        self.sidebar_layout = QVBoxLayout(self.sidebar)
+        self.sidebar_layout.setContentsMargins(15, 20, 15, 20)
+        self.sidebar_layout.setSpacing(8)
+
+        # BRAND
+        brand = QLabel("⚡ FitSync")
+        brand.setFont(QFont("Segoe UI", 16, QFont.Bold))
+        brand.setStyleSheet("color: white; padding: 10px;")
+        self.sidebar_layout.addWidget(brand)
+
+        self.sidebar_layout.addSpacing(10)
+
+        
+        # BUTTONS
+      
 
         self.btn_dashboard = self.create_btn("Dashboard")
         self.btn_add = self.create_btn("Add Entry")
         self.btn_history = self.create_btn("History")
         self.btn_goals = self.create_btn("Goals")
-        self.btn_chart = self.create_btn("Charts")
+        self.btn_chart = self.create_btn("Analytics")
         self.btn_settings = self.create_btn("Settings")
 
         self.buttons = [
@@ -55,15 +80,16 @@ class MainWindow(QMainWindow):
             self.btn_settings
         ]
 
-        for btn in self.buttons:
-            self.sidebar_layout.addWidget(btn)
+        for b in self.buttons:
+            self.sidebar_layout.addWidget(b)
 
         self.sidebar_layout.addStretch()
+
         self.layout.addWidget(self.sidebar)
 
-    
         # STACKED PAGES
-        
+
+
         self.pages = QStackedWidget()
         self.layout.addWidget(self.pages)
 
@@ -84,11 +110,9 @@ class MainWindow(QMainWindow):
         
         # SIGNALS
         
+
         self.page_add.entry_added.connect(self.full_refresh)
 
-        
-        # NAVIGATION
-        
         self.btn_dashboard.clicked.connect(lambda: self.switch(0))
         self.btn_add.clicked.connect(lambda: self.switch(1))
         self.btn_history.clicked.connect(lambda: self.switch(2))
@@ -96,46 +120,59 @@ class MainWindow(QMainWindow):
         self.btn_chart.clicked.connect(lambda: self.switch(4))
         self.btn_settings.clicked.connect(lambda: self.switch(5))
 
-        # default page
+        # DEFAULT
         self.switch(0)
 
     
-    # BUTTON CREATION
+    #  BUTTON CREATION
     
-    def create_btn(self, text):
-        btn = QPushButton(text)
-        btn.setFont(QFont("Arial", 10))
-        btn.setMinimumHeight(40)
-        btn.setCheckable(True)
-        return btn
 
-    
-    # SIDEBAR ACTIVE STATE 
-    
-    def set_active(self, active_btn):
-        for btn in self.buttons:
-            btn.setChecked(False)
-        active_btn.setChecked(True)
+    def create_btn(self, text):
+
+        btn = QPushButton(text)
+        btn.setCheckable(True)
+        btn.setCursor(Qt.PointingHandCursor)
+        btn.setMinimumHeight(45)
+
+        btn.setStyleSheet("""
+            QPushButton {
+                background-color: transparent;
+                color: #cbd5e1;
+                border: none;
+                text-align: left;
+                padding: 10px 14px;
+                border-radius: 10px;
+                font-size: 13px;
+            }
+
+            QPushButton:hover {
+                background-color: #111827;
+                color: white;
+                padding-left: 18px;
+            }
+
+            QPushButton:checked {
+                background-color: #1d4ed8;
+                color: white;
+                font-weight: bold;
+                border-left: 3px solid #3b82f6;
+            }
+        """)
+
+        return btn
 
     
     # PAGE SWITCH
     
+
     def switch(self, index):
 
         self.pages.setCurrentIndex(index)
 
-        mapping = {
-            0: self.btn_dashboard,
-            1: self.btn_add,
-            2: self.btn_history,
-            3: self.btn_goals,
-            4: self.btn_chart,
-            5: self.btn_settings
-        }
+        for i, btn in enumerate(self.buttons):
+            btn.setChecked(i == index)
 
-        self.set_active(mapping[index])
-
-        # refresh pages when opened
+        # refresh logic
         if index == 0:
             self.page_dashboard.refresh_dashboard()
 
@@ -148,25 +185,30 @@ class MainWindow(QMainWindow):
         elif index == 5:
             self.page_settings.load_profile()
 
-    
-    # GLOBAL REFRESH 
    
+    # GLOBAL REFRESH
+
+
     def full_refresh(self):
 
         self.page_dashboard.refresh_dashboard()
         self.page_history.load_data()
         self.page_chart.update_chart()
 
-        self.pages.setCurrentIndex(0)
-        self.set_active(self.btn_dashboard)
+        self.switch(0)
 
 
 
 # RUN APP
 
 if __name__ == "__main__":
+
     app = QApplication(sys.argv)
+
     apply_styles(app)
+
     window = MainWindow()
+
     window.show()
+
     sys.exit(app.exec())

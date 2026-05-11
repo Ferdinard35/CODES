@@ -1,9 +1,17 @@
 from PySide6.QtWidgets import (
-    QWidget, QVBoxLayout, QLabel, QLineEdit,
-    QPushButton, QMessageBox, QDateEdit
+    QWidget,
+    QVBoxLayout,
+    QLabel,
+    QLineEdit,
+    QPushButton,
+    QMessageBox,
+    QDateEdit,
+    QFrame
 )
+
 from PySide6.QtCore import QDate, Signal, Qt
-from PySide6.QtGui import QDoubleValidator
+from PySide6.QtGui import QDoubleValidator, QFont
+
 import database
 
 
@@ -14,121 +22,256 @@ class AddEntryPage(QWidget):
     def __init__(self):
         super().__init__()
 
+        
+        # MAIN LAYOUT
+        
+
         self.layout = QVBoxLayout(self)
 
-       
-        # DATE INPUT
-       
-        self.layout.addWidget(QLabel("Date:"))
+        self.layout.setContentsMargins(40, 40, 40, 40)
+
+        self.layout.setSpacing(20)
+
+        
+        # TITLE
+
+        self.title = QLabel("➕ Add New Entry")
+
+        self.title.setFont(QFont("Segoe UI", 22, QFont.Bold))
+
+        self.title.setStyleSheet("color: white;")
+
+        self.layout.addWidget(self.title)
+
+        self.subtitle = QLabel("Log your body measurements")
+
+        self.subtitle.setStyleSheet("""
+            color: #94a3b8;
+            font-size: 14px;
+        """)
+
+        self.layout.addWidget(self.subtitle)
+
+        
+        # CARD
+        
+
+        self.card = QFrame()
+
+        self.card.setStyleSheet("""
+            QFrame {
+                background-color: #111827;
+                border-radius: 22px;
+                border: 1px solid #1f2937;
+            }
+        """)
+
+        self.card_layout = QVBoxLayout(self.card)
+
+        self.card_layout.setContentsMargins(30, 30, 30, 30)
+
+        self.card_layout.setSpacing(18)
+
+        
+        # DATE SECTION
+        
+
+        date_label = QLabel("📅 Date")
+
+        date_label.setStyleSheet("""
+            color: #e2e8f0;
+            font-weight: 600;
+        """)
+
+        self.card_layout.addWidget(date_label)
 
         self.date_input = QDateEdit()
+
         self.date_input.setCalendarPopup(True)
+
         self.date_input.setDate(QDate.currentDate())
-        self.layout.addWidget(self.date_input)
+
+        self.date_input.setMinimumHeight(45)
+
+        self.date_input.setStyleSheet("""
+            QDateEdit {
+                background-color: #1e293b;
+                color: white;
+                border-radius: 12px;
+                padding: 10px;
+                border: 2px solid transparent;
+            }
+
+            QDateEdit:focus {
+                border: 2px solid #2563eb;
+            }
+        """)
+
+        self.card_layout.addWidget(self.date_input)
 
         
-        # INPUT VALIDATOR
-    
+        # INPUTS
+        
+
         validator = QDoubleValidator(0.0, 500.0, 2)
 
-        self.weight = self.create_input("Weight (kg)", validator)
-        self.waist = self.create_input("Waist (cm)", validator)
-        self.chest = self.create_input("Chest (cm)", validator)
-        self.arms = self.create_input("Arms (cm)", validator)
+        self.weight = self.create_input("⚖ Weight (kg)", validator)
 
-        
+        self.waist = self.create_input("📏 Waist (cm)", validator)
+
+        self.chest = self.create_input("💪 Chest (cm)", validator)
+
+        self.arms = self.create_input("💥 Arms (cm)", validator)
+
+       
         # SAVE BUTTON
+      
 
         self.btn = QPushButton("Save Entry")
-        self.btn.setFixedHeight(40)
+
         self.btn.setCursor(Qt.PointingHandCursor)
+
+        self.btn.setMinimumHeight(55)
 
         self.btn.setStyleSheet("""
             QPushButton {
-                background-color: #4CAF50;
+                background-color: #22c55e;
                 color: white;
-                border-radius: 8px;
+                border-radius: 14px;
                 font-size: 15px;
                 font-weight: bold;
+                border: none;
             }
 
             QPushButton:hover {
-                background-color: #45a049;
+                background-color: #4ade80;
+            }
+
+            QPushButton:pressed {
+                background-color: #16a34a;
             }
         """)
 
         self.btn.clicked.connect(self.save_entry)
-        self.layout.addWidget(self.btn)
 
-        
+        self.card_layout.addWidget(self.btn)
+
+        # ADD CARD
+        self.layout.addWidget(self.card)
+
+        self.layout.addStretch()
+
         # ENTER KEY SUPPORT
-        
         for field in [self.weight, self.waist, self.chest, self.arms]:
             field.returnPressed.connect(self.save_entry)
 
+
+    # INPUT FACTORY
     
-    # INPUT CREATOR
-    
+
     def create_input(self, label, validator):
 
-        self.layout.addWidget(QLabel(label))
+        container = QVBoxLayout()
+
+        lbl = QLabel(label)
+
+        lbl.setStyleSheet("""
+            color: #e2e8f0;
+            font-weight: 600;
+        """)
 
         field = QLineEdit()
+
         field.setValidator(validator)
+
         field.setPlaceholderText("0.0")
 
-        self.layout.addWidget(field)
+        field.setMinimumHeight(45)
+
+        field.setStyleSheet("""
+            QLineEdit {
+                background-color: #1e293b;
+                color: white;
+                border-radius: 12px;
+                padding-left: 12px;
+                border: 2px solid transparent;
+            }
+
+            QLineEdit:focus {
+                border: 2px solid #2563eb;
+            }
+        """)
+
+        container.addWidget(lbl)
+
+        container.addWidget(field)
+
+        self.card_layout.addLayout(container)
 
         return field
 
     
     # SUCCESS POPUP
-    
+   
+
     def show_success_popup(self, weight, entry_date):
 
         msg = QMessageBox(self)
+
         msg.setWindowTitle("Entry Added")
+
         msg.setText("<h3>Success!</h3>")
+
         msg.setInformativeText(
             f"Added <b>{weight} kg</b> for <b>{entry_date}</b>."
         )
+
         msg.setIcon(QMessageBox.Information)
+
         msg.exec()
 
-   
-    # SAVE ENTRY LOGIC
-   
+  
+    # SAVE LOGIC
+    
+
     def save_entry(self):
 
-        # VALIDATION
         if not self.weight.text():
-            QMessageBox.warning(self, "Error", "Weight is required")
+
+            QMessageBox.warning(
+                self,
+                "Error",
+                "Weight is required"
+            )
+
             return
 
-        # HEIGHT CHECK
         height = database.get_user_height()
+
         if not height:
+
             QMessageBox.warning(
                 self,
                 "Error",
                 "Please set your height in Settings first"
             )
+
             return
 
-        # DATE
         date_str = self.date_input.date().toString("yyyy-MM-dd")
 
-        # DUPLICATE CHECK
         if database.entry_exists(date_str):
+
             QMessageBox.warning(
                 self,
                 "Duplicate Entry",
                 "An entry already exists for this date."
             )
+
             return
 
-        # SAVE
         try:
+
             database.add_weight_entry(
                 date_str,
                 float(self.weight.text()),
@@ -137,24 +280,37 @@ class AddEntryPage(QWidget):
                 float(self.arms.text() or 0)
             )
 
-            # SUCCESS FLOW
-            self.show_success_popup(self.weight.text(), date_str)
+            self.show_success_popup(
+                self.weight.text(),
+                date_str
+            )
+
             self.entry_added.emit()
+
             self.clear_fields()
 
         except Exception as e:
+
             QMessageBox.critical(
                 self,
                 "Database Error",
-                f"Could not save entry: {str(e)}"
+                str(e)
             )
 
+   
+    # CLEAR FORM
     
-    # RESET FORM
-  
+
     def clear_fields(self):
 
-        for field in [self.weight, self.waist, self.chest, self.arms]:
+        for field in [
+            self.weight,
+            self.waist,
+            self.chest,
+            self.arms
+        ]:
             field.clear()
 
-        self.date_input.setDate(QDate.currentDate())
+        self.date_input.setDate(
+            QDate.currentDate()
+        )

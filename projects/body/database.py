@@ -5,14 +5,20 @@ DB_NAME = "tracker.db"
 
 
 # CONNECTION
+
+
 def create_connection():
-    return sqlite3.connect(DB_NAME)
+    conn = sqlite3.connect(DB_NAME)
+    conn.row_factory = sqlite3.Row  # cleaner access
+    return conn
 
 
 
-# INIT DB
+# INIT DATABASE
+
 
 def init_db():
+
     with create_connection() as conn:
         cursor = conn.cursor()
 
@@ -50,13 +56,13 @@ def init_db():
 
 
 
-# USER
+# USER PROFILE
+
 
 def save_user_profile(name, age, height):
-    with create_connection() as conn:
-        cursor = conn.cursor()
 
-        cursor.execute("""
+    with create_connection() as conn:
+        conn.execute("""
             INSERT INTO users (id, name, age, height)
             VALUES (1, ?, ?, ?)
             ON CONFLICT(id) DO UPDATE SET
@@ -65,22 +71,31 @@ def save_user_profile(name, age, height):
                 height=excluded.height
         """, (name, age, height))
 
-        conn.commit()
-
 
 def get_user_profile():
-    with create_connection() as conn:
-        cursor = conn.cursor()
 
-        cursor.execute("SELECT name, age, height FROM users LIMIT 1")
-        return cursor.fetchone()
+    with create_connection() as conn:
+        row = conn.execute("""
+            SELECT name, age, height
+            FROM users
+            WHERE id = 1
+        """).fetchone()
+
+        if not row:
+            return None
+
+        return dict(row)
 
 
 def get_user_height():
+
     user = get_user_profile()
 
+    if not user or not user["height"]:
+        return 0
+
     try:
-        return float(user[2]) if user and user[2] else 0
+        return float(user["height"])
     except:
         return 0
 
@@ -89,7 +104,9 @@ def get_user_height():
 # ENTRIES
 
 def add_weight_entry(date, weight, waist, chest, arms):
+
     height_cm = get_user_height()
+
     bmi = 0
 
     if height_cm > 0:
@@ -97,103 +114,96 @@ def add_weight_entry(date, weight, waist, chest, arms):
         bmi = round(weight / (height_m ** 2), 2)
 
     with create_connection() as conn:
-        cursor = conn.cursor()
-
-        cursor.execute("""
+        conn.execute("""
             INSERT OR REPLACE INTO entries
             (date, weight, waist, chest, arms, bmi)
             VALUES (?, ?, ?, ?, ?, ?)
         """, (date, weight, waist, chest, arms, bmi))
 
-        conn.commit()
-
 
 def entry_exists(date):
+
     with create_connection() as conn:
-        cursor = conn.cursor()
+        row = conn.execute("""
+            SELECT 1 FROM entries
+            WHERE date = ?
+        """, (date,)).fetchone()
 
-        cursor.execute(
-            "SELECT 1 FROM entries WHERE date = ? LIMIT 1",
-            (date,)
-        )
-
-        return cursor.fetchone() is not None
+        return row is not None
 
 
 def get_latest_entry():
-    with create_connection() as conn:
-        cursor = conn.cursor()
 
-        cursor.execute("""
+    with create_connection() as conn:
+        row = conn.execute("""
             SELECT weight, bmi
             FROM entries
             ORDER BY id DESC
             LIMIT 1
-        """)
+        """).fetchone()
 
-        return cursor.fetchone()
+        if not row:
+            return None
+
+        return float(row["weight"]), float(row["bmi"])
 
 
 def get_latest_measurements():
-    with create_connection() as conn:
-        cursor = conn.cursor()
 
-        cursor.execute("""
+    with create_connection() as conn:
+        row = conn.execute("""
             SELECT waist, chest, arms
             FROM entries
             ORDER BY id DESC
             LIMIT 1
-        """)
+        """).fetchone()
 
-        return cursor.fetchone()
+        if not row:
+            return None
+
+        return float(row["waist"]), float(row["chest"]), float(row["arms"])
 
 
 def get_all_entries():
-    with create_connection() as conn:
-        cursor = conn.cursor()
 
-        # FIX: order by date instead of id (IMPORTANT FOR CHART)
-        cursor.execute("""
+    with create_connection() as conn:
+        rows = conn.execute("""
             SELECT date, weight
             FROM entries
             ORDER BY date ASC
-        """)
+        """).fetchall()
 
-        return cursor.fetchall()
+        return [(r["date"], r["weight"]) for r in rows]
 
 
 def get_all_history():
-    with create_connection() as conn:
-        cursor = conn.cursor()
 
-        cursor.execute("""
+    with create_connection() as conn:
+        rows = conn.execute("""
             SELECT * FROM entries
             ORDER BY id DESC
-        """)
+        """).fetchall()
 
-        return cursor.fetchall()
+        return [dict(r) for r in rows]
 
 
 def delete_entry(entry_id):
+
     with create_connection() as conn:
-        cursor = conn.cursor()
-
-        cursor.execute(
-            "DELETE FROM entries WHERE id=?",
-            (entry_id,)
-        )
-
-        conn.commit()
+        conn.execute("""
+            DELETE FROM entries
+            WHERE id = ?
+        """, (entry_id,))
 
 
 
 # GOALS
 
-def save_goals(weight, waist, chest):
-    with create_connection() as conn:
-        cursor = conn.cursor()
 
-        cursor.execute("""
+def save_goals(weight, waist, chest):
+
+    with create_connection() as conn:
+        conn.execute("""
             INSERT INTO goals
             (id, target_weight, target_waist, target_chest)
             VALUES (1, ?, ?, ?)
@@ -203,31 +213,22 @@ def save_goals(weight, waist, chest):
                 target_chest=excluded.target_chest
         """, (weight, waist, chest))
 
-        conn.commit()
-
 
 def get_goals():
-    with create_connection() as conn:
-        cursor = conn.cursor()
 
-        cursor.execute("""
+    with create_connection() as conn:
+        row = conn.execute("""
             SELECT target_weight, target_waist, target_chest
             FROM goals
-            LIMIT 1
-        """)
+            WHERE id = 1
+        """).fetchone()
 
-        return cursor.fetchone()
+        if not row:
+            return None
+
+        return dict(row)
 
 
-# FIXED: consistent return (VERY IMPORTANT)
 def get_current_goal():
-    goals = get_goals()
 
-    if not goals:
-        return None
-
-    return {
-        "weight": goals[0],
-        "waist": goals[1],
-        "chest": goals[2]
-    }
+    return get_goals()
