@@ -180,11 +180,23 @@ def get_all_history():
 
     with create_connection() as conn:
         rows = conn.execute("""
-            SELECT * FROM entries
+            SELECT id, date, weight, waist, chest, arms, bmi
+            FROM entries
             ORDER BY id DESC
         """).fetchall()
 
-        return [dict(r) for r in rows]
+        return [
+            (
+                row["id"],
+                row["date"],
+                row["weight"],
+                row["waist"],
+                row["chest"],
+                row["arms"],
+                row["bmi"]
+            )
+            for row in rows
+        ]
 
 
 def delete_entry(entry_id):

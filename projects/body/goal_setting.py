@@ -1,69 +1,39 @@
 from PySide6.QtWidgets import (
-    QWidget,
-    QVBoxLayout,
-    QLabel,
-    QLineEdit,
-    QPushButton,
-    QMessageBox,
-    QFrame
+    QWidget, QVBoxLayout, QLabel, QLineEdit,
+    QPushButton, QMessageBox, QFrame
 )
 
 from PySide6.QtGui import QDoubleValidator, QFont
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, Signal
 
 import database
 
 
 class GoalSettingPage(QWidget):
 
+    # 🔥 SIGNAL ADDED (fixes your crash)
+    goal_saved = Signal()
+
     def __init__(self):
         super().__init__()
 
-      
-        # MAIN LAYOUT
-        
-
         self.layout = QVBoxLayout(self)
-
         self.layout.setContentsMargins(40, 40, 40, 40)
-
         self.layout.setSpacing(25)
 
-      
-        # PAGE TITLE
-      
-
         self.title = QLabel("🎯 Fitness Goals")
-
         self.title.setFont(QFont("Segoe UI", 22, QFont.Bold))
-
-        self.title.setStyleSheet("""
-            color: white;
-        """)
-
+        self.title.setStyleSheet("color: white;")
         self.layout.addWidget(self.title)
-
-      
-        # SUBTITLE
-     
 
         self.subtitle = QLabel(
             "Set your body measurement targets and track your progress."
         )
-
-        self.subtitle.setStyleSheet("""
-            color: #94a3b8;
-            font-size: 14px;
-        """)
-
+        self.subtitle.setStyleSheet("color: #94a3b8; font-size: 14px;")
         self.layout.addWidget(self.subtitle)
 
-      
-        # CARD CONTAINER
-   
-
+        # CARD
         self.card = QFrame()
-
         self.card.setStyleSheet("""
             QFrame {
                 background-color: #111827;
@@ -73,51 +43,28 @@ class GoalSettingPage(QWidget):
         """)
 
         self.card_layout = QVBoxLayout(self.card)
-
         self.card_layout.setContentsMargins(30, 30, 30, 30)
-
         self.card_layout.setSpacing(22)
 
-        
-        # INPUTS
+        self.weight = self.create_input("🏋 Target Weight (kg)")
+        self.waist = self.create_input("📏 Target Waist (cm)")
+        self.chest = self.create_input("💪 Target Chest (cm)")
 
-        self.weight = self.create_input(
-            "🏋 Target Weight (kg)"
-        )
-
-        self.waist = self.create_input(
-            "📏 Target Waist (cm)"
-        )
-
-        self.chest = self.create_input(
-            "💪 Target Chest (cm)"
-        )
-
-        
-        # SAVE BUTTON
-        
         self.btn_save = QPushButton("Save Goals")
-
-        self.btn_save.setCursor(Qt.PointingHandCursor)
-
         self.btn_save.setMinimumHeight(55)
-
+        self.btn_save.setCursor(Qt.PointingHandCursor)
         self.btn_save.clicked.connect(self.save_goals)
 
         self.btn_save.setStyleSheet("""
             QPushButton {
                 background-color: #2563eb;
                 color: white;
-                border: none;
                 border-radius: 14px;
-                font-size: 15px;
                 font-weight: bold;
             }
-
             QPushButton:hover {
                 background-color: #3b82f6;
             }
-
             QPushButton:pressed {
                 background-color: #1d4ed8;
             }
@@ -125,166 +72,101 @@ class GoalSettingPage(QWidget):
 
         self.card_layout.addWidget(self.btn_save)
 
-        # ADD CARD TO PAGE
         self.layout.addWidget(self.card)
-
         self.layout.addStretch()
 
-        # LOAD GOALS
         self.refresh_goals()
-
-    
-    # CREATE INPUT FIELD
-    
 
     def create_input(self, label_text):
 
         container = QVBoxLayout()
 
         label = QLabel(label_text)
-
-        label.setStyleSheet("""
-            color: #e2e8f0;
-            font-size: 14px;
-            font-weight: 600;
-        """)
+        label.setStyleSheet("color: #e2e8f0; font-weight: 600;")
 
         field = QLineEdit()
-
-        field.setValidator(
-            QDoubleValidator(0.0, 500.0, 2)
-        )
-
+        field.setValidator(QDoubleValidator(0.0, 500.0, 2))
         field.setPlaceholderText("Enter value...")
-
         field.setMinimumHeight(50)
 
         field.setStyleSheet("""
             QLineEdit {
                 background-color: #1e293b;
                 color: white;
-                border: 2px solid transparent;
                 border-radius: 14px;
                 padding-left: 15px;
-                font-size: 14px;
+                border: 2px solid transparent;
             }
-
             QLineEdit:focus {
                 border: 2px solid #2563eb;
-                background-color: #243244;
             }
         """)
 
         container.addWidget(label)
-
         container.addWidget(field)
-
         self.card_layout.addLayout(container)
 
         return field
 
-    
-    # VALIDATION
-    
-
-    def get_float(self, field, name):
-
+    def to_float(self, field):
         text = field.text().strip()
-
-        if text == "":
+        if not text:
             return None
-
         try:
             return float(text)
-
         except:
-            raise ValueError(f"Invalid {name}")
-
-    
-    # SAVE GOALS
-    
+            return None
 
     def save_goals(self):
 
-        try:
+        weight = self.to_float(self.weight)
+        waist = self.to_float(self.waist)
+        chest = self.to_float(self.chest)
 
-            weight = self.get_float(
-                self.weight,
-                "weight"
-            )
+        if weight is None and waist is None and chest is None:
+            QMessageBox.warning(self, "Error", "Enter at least one goal")
+            return
 
-            waist = self.get_float(
-                self.waist,
-                "waist"
-            )
+        database.save_goals(
+            weight or 0,
+            waist or 0,
+            chest or 0
+        )
 
-            chest = self.get_float(
-                self.chest,
-                "chest"
-            )
+        # 🔥 BEAUTIFUL POPUP
+        msg = QMessageBox(self)
+        msg.setWindowTitle("Goals Saved")
+        msg.setText("🎯 Goals updated successfully!")
 
-            if (
-                weight is None and
-                waist is None and
-                chest is None
-            ):
+        msg.setStyleSheet("""
+            QMessageBox {
+                background-color: #0f172a;
+            }
+            QLabel {
+                color: white;
+            }
+            QPushButton {
+                background-color: #22c55e;
+                color: white;
+                padding: 8px 16px;
+                border-radius: 10px;
+            }
+        """)
 
-                QMessageBox.warning(
-                    self,
-                    "Error",
-                    "Please enter at least one goal value"
-                )
+        msg.exec()
 
-                return
+        # 🔥 SIGNAL EMIT (this fixes your main.py crash)
+        self.goal_saved.emit()
 
-            weight = weight or 0
-
-            waist = waist or 0
-
-            chest = chest or 0
-
-            database.save_goals(
-                weight,
-                waist,
-                chest
-            )
-
-            QMessageBox.information(
-                self,
-                "Saved",
-                "Goals updated successfully!"
-            )
-
-        except ValueError as e:
-
-            QMessageBox.warning(
-                self,
-                "Error",
-                str(e)
-            )
-
-        except Exception:
-
-            QMessageBox.warning(
-                self,
-                "Error",
-                "Something went wrong while saving goals"
-            )
-
-    
-    # LOAD GOALS
-    
+        self.refresh_goals()
 
     def refresh_goals(self):
 
         goals = database.get_goals()
 
-        if goals:
+        if not goals:
+            return
 
-            weight, waist, chest = goals
-
-            self.weight.setText(str(weight))
-
-            self.waist.setText(str(waist))
-
-            self.chest.setText(str(chest))
+        self.weight.setText(str(goals.get("weight") or ""))
+        self.waist.setText(str(goals.get("waist") or ""))
+        self.chest.setText(str(goals.get("chest") or ""))

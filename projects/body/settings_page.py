@@ -8,12 +8,7 @@ from PySide6.QtWidgets import (
     QFrame
 )
 
-from PySide6.QtGui import (
-    QIntValidator,
-    QDoubleValidator,
-    QFont
-)
-
+from PySide6.QtGui import QIntValidator, QDoubleValidator, QFont
 from PySide6.QtCore import Qt
 
 import database
@@ -24,24 +19,17 @@ class SettingsPage(QWidget):
     def __init__(self):
         super().__init__()
 
-       
         # MAIN LAYOUT
         self.layout = QVBoxLayout(self)
         self.layout.setContentsMargins(40, 40, 40, 40)
         self.layout.setSpacing(25)
 
-      
         # TITLE
         self.title = QLabel("⚙ Profile Settings")
-        self.title.setFont(
-            QFont("Segoe UI", 22, QFont.Bold)
-        )
-        self.title.setStyleSheet("""
-            color: white;
-        """)
+        self.title.setFont(QFont("Segoe UI", 22, QFont.Bold))
+        self.title.setStyleSheet("color: white;")
         self.layout.addWidget(self.title)
 
-        
         # SUBTITLE
         self.subtitle = QLabel(
             "Manage your personal fitness profile information."
@@ -52,7 +40,6 @@ class SettingsPage(QWidget):
         """)
         self.layout.addWidget(self.subtitle)
 
-        
         # CARD
         self.card = QFrame()
         self.card.setStyleSheet("""
@@ -67,37 +54,19 @@ class SettingsPage(QWidget):
         self.card_layout.setContentsMargins(30, 30, 30, 30)
         self.card_layout.setSpacing(22)
 
-        
         # INPUTS
-        self.name_input = self.create_input(
-            "👤 Name",
-            "Enter your name"
-        )
-        self.age_input = self.create_input(
-            "🎂 Age",
-            "e.g. 21"
-        )
-        self.age_input.setValidator(
-            QIntValidator(1, 120)
-        )
+        self.name_input = self.create_input("👤 Name", "Enter your name")
+        self.age_input = self.create_input("🎂 Age", "e.g. 21")
+        self.height_input = self.create_input("📏 Height (cm)", "e.g. 175")
 
-        self.height_input = self.create_input(
-            "📏 Height (cm)",
-            "e.g. 175"
-        )
+        self.age_input.setValidator(QIntValidator(1, 120))
+        self.height_input.setValidator(QDoubleValidator(50.0, 250.0, 1))
 
-        self.height_input.setValidator(
-            QDoubleValidator(50.0, 250.0, 1)
-        )
-
-        
         # SAVE BUTTON
         self.save_btn = QPushButton("Save Profile")
         self.save_btn.setCursor(Qt.PointingHandCursor)
         self.save_btn.setMinimumHeight(55)
-        self.save_btn.clicked.connect(
-            self.save_profile
-        )
+        self.save_btn.clicked.connect(self.save_profile)
 
         self.save_btn.setStyleSheet("""
             QPushButton {
@@ -122,19 +91,14 @@ class SettingsPage(QWidget):
         self.layout.addWidget(self.card)
         self.layout.addStretch()
 
-        # LOAD PROFILE
-        self.load_profile()
+        self.load_profile_safe()
 
-   
-    # CREATE INPUT
-   
-
+    # 🔥 FIXED INPUT (placeholder disappears ON FIRST CLICK ONLY)
     def create_input(self, label_text, placeholder):
 
         container = QVBoxLayout()
 
         label = QLabel(label_text)
-
         label.setStyleSheet("""
             color: #e2e8f0;
             font-size: 14px;
@@ -142,10 +106,11 @@ class SettingsPage(QWidget):
         """)
 
         field = QLineEdit()
-
         field.setPlaceholderText(placeholder)
-
         field.setMinimumHeight(50)
+
+        # track if placeholder already cleared
+        field._placeholder_cleared = False
 
         field.setStyleSheet("""
             QLineEdit {
@@ -163,90 +128,59 @@ class SettingsPage(QWidget):
             }
         """)
 
+        # 🔥 MAIN FIX
+        def clear_placeholder():
+            if not field._placeholder_cleared:
+                field.setPlaceholderText("")
+                field._placeholder_cleared = True
+
+        field.focusInEvent = lambda event: (
+            clear_placeholder(),
+            QLineEdit.focusInEvent(field, event)
+        )
+
         container.addWidget(label)
-
         container.addWidget(field)
-
         self.card_layout.addLayout(container)
 
         return field
 
-    
     # SAVE PROFILE
-   
-
     def save_profile(self):
 
         name = self.name_input.text().strip()
-
         age_text = self.age_input.text().strip()
-
         height_text = self.height_input.text().strip()
 
         if not name:
-
-            QMessageBox.warning(
-                self,
-                "Error",
-                "Name is required"
-            )
-
+            QMessageBox.warning(self, "Error", "Name is required")
             return
 
         try:
-
             age = int(age_text) if age_text else None
+            height = float(height_text) if height_text else None
 
-            height = (
-                float(height_text)
-                if height_text else None
-            )
-
-            if age is None or age <= 0:
-
-                QMessageBox.warning(
-                    self,
-                    "Error",
-                    "Valid age required"
-                )
-
+            if not age or age <= 0:
+                QMessageBox.warning(self, "Error", "Valid age required")
                 return
 
-            if height is None or height <= 0:
-
-                QMessageBox.warning(
-                    self,
-                    "Error",
-                    "Valid height required"
-                )
-
+            if not height or height <= 0:
+                QMessageBox.warning(self, "Error", "Valid height required")
                 return
 
-            database.save_user_profile(
-                name,
-                age,
-                height
-            )
+            database.save_user_profile(name, age, height)
 
             QMessageBox.information(
                 self,
-                "Success",
-                "Profile saved successfully!"
+                "Profile Saved ✅",
+                "Your profile has been updated successfully!"
             )
 
         except ValueError:
+            QMessageBox.warning(self, "Error", "Please enter valid numbers")
 
-            QMessageBox.warning(
-                self,
-                "Error",
-                "Please enter valid numbers"
-            )
-
-    
-    # LOAD PROFILE
-   
-
-    def load_profile(self):
+    # LOAD PROFILE SAFELY (no overwriting user input)
+    def load_profile_safe(self):
 
         user = database.get_user_profile()
 
@@ -255,12 +189,11 @@ class SettingsPage(QWidget):
 
         name, age, height = user
 
-        self.name_input.setText(name or "")
+        if not self.name_input.text():
+            self.name_input.setText(name or "")
 
-        self.age_input.setText(
-            str(age) if age else ""
-        )
+        if not self.age_input.text():
+            self.age_input.setText(str(age) if age else "")
 
-        self.height_input.setText(
-            str(height) if height else ""
-        )
+        if not self.height_input.text():
+            self.height_input.setText(str(height) if height else "")

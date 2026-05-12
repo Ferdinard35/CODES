@@ -23,31 +23,21 @@ class MainWindow(QMainWindow):
 
     def __init__(self):
         super().__init__()
-
-        self.setWindowTitle("Fitness  Tracker")
+        self.setWindowTitle("Fitness Tracker")
         self.setMinimumSize(1200, 750)
-
         database.init_db()
 
-
         # CENTRAL
-       
-
         central = QWidget()
         self.setCentralWidget(central)
-
         self.layout = QHBoxLayout(central)
         self.layout.setContentsMargins(0, 0, 0, 0)
         self.layout.setSpacing(0)
 
-        
-        # SIDEBAR 
-       
-
+        # SIDEBAR
         self.sidebar = QFrame()
         self.sidebar.setObjectName("sidebar")
         self.sidebar.setFixedWidth(240)
-
         self.sidebar_layout = QVBoxLayout(self.sidebar)
         self.sidebar_layout.setContentsMargins(15, 20, 15, 20)
         self.sidebar_layout.setSpacing(8)
@@ -57,13 +47,9 @@ class MainWindow(QMainWindow):
         brand.setFont(QFont("Segoe UI", 16, QFont.Bold))
         brand.setStyleSheet("color: white; padding: 10px;")
         self.sidebar_layout.addWidget(brand)
-
         self.sidebar_layout.addSpacing(10)
 
-        
         # BUTTONS
-      
-
         self.btn_dashboard = self.create_btn("Dashboard")
         self.btn_add = self.create_btn("Add Entry")
         self.btn_history = self.create_btn("History")
@@ -84,12 +70,9 @@ class MainWindow(QMainWindow):
             self.sidebar_layout.addWidget(b)
 
         self.sidebar_layout.addStretch()
-
         self.layout.addWidget(self.sidebar)
 
         # STACKED PAGES
-
-
         self.pages = QStackedWidget()
         self.layout.addWidget(self.pages)
 
@@ -107,11 +90,11 @@ class MainWindow(QMainWindow):
         self.pages.addWidget(self.page_chart)
         self.pages.addWidget(self.page_settings)
 
-        
-        # SIGNALS
-        
+        # 🔥 SIGNALS
+        self.page_goals.goal_saved.connect(self.page_dashboard.refresh_dashboard)
 
-        self.page_add.entry_added.connect(self.full_refresh)
+        # 👉 NEW: goals update connection
+        self.page_goals.goal_saved.connect(self.on_goals_updated)
 
         self.btn_dashboard.clicked.connect(lambda: self.switch(0))
         self.btn_add.clicked.connect(lambda: self.switch(1))
@@ -120,13 +103,9 @@ class MainWindow(QMainWindow):
         self.btn_chart.clicked.connect(lambda: self.switch(4))
         self.btn_settings.clicked.connect(lambda: self.switch(5))
 
-        # DEFAULT
         self.switch(0)
 
-    
-    #  BUTTON CREATION
-    
-
+    # BUTTON CREATION
     def create_btn(self, text):
 
         btn = QPushButton(text)
@@ -161,10 +140,7 @@ class MainWindow(QMainWindow):
 
         return btn
 
-    
     # PAGE SWITCH
-    
-
     def switch(self, index):
 
         self.pages.setCurrentIndex(index)
@@ -172,7 +148,6 @@ class MainWindow(QMainWindow):
         for i, btn in enumerate(self.buttons):
             btn.setChecked(i == index)
 
-        # refresh logic
         if index == 0:
             self.page_dashboard.refresh_dashboard()
 
@@ -185,22 +160,25 @@ class MainWindow(QMainWindow):
         elif index == 5:
             self.page_settings.load_profile()
 
-   
     # GLOBAL REFRESH
-
-
     def full_refresh(self):
 
         self.page_dashboard.refresh_dashboard()
         self.page_history.load_data()
         self.page_chart.update_chart()
-
         self.switch(0)
 
+    # 🔥 NEW: handle goal updates properly
+    def on_goals_updated(self):
 
+        # refresh chart or dashboard if needed
+        self.page_chart.update_chart()
+        self.page_dashboard.refresh_dashboard()
 
-# RUN APP
+        # stay on goals page but ensure values reload
+        self.page_goals.refresh_goals()
 
+    # RUN APP
 if __name__ == "__main__":
 
     app = QApplication(sys.argv)
