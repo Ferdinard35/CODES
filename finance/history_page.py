@@ -1,6 +1,7 @@
 from PySide6.QtWidgets import (
     QWidget,
     QVBoxLayout,
+    QHBoxLayout,
     QLabel,
     QTableWidget,
     QTableWidgetItem,
@@ -8,15 +9,17 @@ from PySide6.QtWidgets import (
     QMessageBox,
     QHeaderView,
     QAbstractItemView,
-    QFrame
+    QFrame,
+    QLineEdit,
+    QComboBox
 )
 
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QColor, QFont
 
 import database
-
 from refresh import refresh_manager
+from edit_transaction_dialog import EditTransactionDialog
 
 
 class HistoryPage(QWidget):
@@ -24,64 +27,54 @@ class HistoryPage(QWidget):
     def __init__(self):
         super().__init__()
 
-        
+
         # MAIN LAYOUT
         
         self.main_layout = QVBoxLayout(self)
-
-        self.main_layout.setContentsMargins(
-            25,
-            25,
-            25,
-            25
-        )
-
+        self.main_layout.setContentsMargins(25, 25, 25, 25)
         self.main_layout.setSpacing(20)
 
-    
+        
         # TITLE
         
-        self.title = QLabel(
-            "Transaction History"
-        )
+        self.title = QLabel("Transaction History")
+        self.title.setFont(QFont("Segoe UI", 22, QFont.Bold))
+        self.main_layout.addWidget(self.title)
 
-        self.title.setFont(
-            QFont(
-                "Segoe UI",
-                22,
-                QFont.Bold
-            )
-        )
+        
+        # FILTER BAR (SEARCH + TYPE)
+    
+        self.filter_layout = QHBoxLayout()
 
-        self.main_layout.addWidget(
-            self.title
-        )
+        self.search_input = QLineEdit()
+        self.search_input.setPlaceholderText("Search category or description...")
+
+        self.type_filter = QComboBox()
+        self.type_filter.addItems(["All", "Income", "Expense"])
+
+        self.filter_layout.addWidget(self.search_input)
+        self.filter_layout.addWidget(self.type_filter)
+
+        self.main_layout.addLayout(self.filter_layout)
+
+        # CONNECT FILTERS
+        self.search_input.textChanged.connect(self.apply_filters)
+        self.type_filter.currentTextChanged.connect(self.apply_filters)
 
         
         # CONTAINER
         
         self.container = QFrame()
+        self.container.setObjectName("container")
 
-        self.container.setObjectName(
-            "container"
-        )
+        self.container_layout = QVBoxLayout(self.container)
+        self.container_layout.setContentsMargins(20, 20, 20, 20)
 
-        self.container_layout = QVBoxLayout(
-            self.container
-        )
-
-        self.container_layout.setContentsMargins(
-            20,
-            20,
-            20,
-            20
-        )
-
-    
+        
         # TABLE
+    
         self.table = QTableWidget()
-
-        self.table.setColumnCount(7)
+        self.table.setColumnCount(8)
 
         self.table.setHorizontalHeaderLabels([
             "ID",
@@ -90,59 +83,30 @@ class HistoryPage(QWidget):
             "Description",
             "Amount",
             "Type",
-            "Action"
+            "Edit",
+            "Delete"
         ])
 
-        
-        # TABLE SETTINGS
-    
-        self.table.horizontalHeader().setSectionResizeMode(
-            QHeaderView.Stretch
-        )
-
-        self.table.setSelectionBehavior(
-            QAbstractItemView.SelectRows
-        )
-
-        self.table.setEditTriggers(
-            QAbstractItemView.NoEditTriggers
-        )
-
-        self.table.verticalHeader().setVisible(
-            False
-        )
-
-        self.table.setAlternatingRowColors(
-            True
-        )
-
+        self.table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        self.table.setSelectionBehavior(QAbstractItemView.SelectRows)
+        self.table.setEditTriggers(QAbstractItemView.NoEditTriggers)
+        self.table.verticalHeader().setVisible(False)
+        self.table.setAlternatingRowColors(True)
         self.table.setShowGrid(False)
-
         self.table.setMinimumHeight(500)
 
-        self.container_layout.addWidget(
-            self.table
-        )
+        self.container_layout.addWidget(self.table)
+        self.main_layout.addWidget(self.container)
 
-        self.main_layout.addWidget(
-            self.container
-        )
-
-        
         # LOAD DATA
-
         self.load_transactions()
 
-        
         # AUTO REFRESH
-        
-        refresh_manager.data_changed.connect(
-            self.load_transactions
-        )
+        refresh_manager.data_changed.connect(self.load_transactions)
 
-    
+
         # STYLES
-    
+        
         self.setStyleSheet("""
             QWidget {
                 background-color: #0f172a;
@@ -150,8 +114,12 @@ class HistoryPage(QWidget):
                 font-family: Segoe UI;
             }
 
-            QLabel {
+            QLineEdit, QComboBox {
+                padding: 10px;
+                border-radius: 8px;
+                background-color: #1e293b;
                 color: white;
+                border: 1px solid #334155;
             }
 
             #container {
@@ -163,76 +131,56 @@ class HistoryPage(QWidget):
                 background-color: #1e293b;
                 border: none;
                 border-radius: 12px;
-                gridline-color: transparent;
                 font-size: 14px;
             }
 
             QHeaderView::section {
                 background-color: #334155;
                 color: white;
-                border: none;
                 padding: 12px;
-                font-size: 14px;
                 font-weight: bold;
-            }
-
-            QTableWidget::item {
-                padding: 10px;
-                border-bottom: 1px solid #334155;
-            }
-
-            QTableWidget::item:selected {
-                background-color: #2563eb;
             }
 
             QPushButton {
-                background-color: #dc2626;
                 color: white;
-                border: none;
                 border-radius: 8px;
-                padding: 8px;
+                padding: 6px;
                 font-weight: bold;
-            }
-
-            QPushButton:hover {
-                background-color: #ef4444;
-            }
-
-            QPushButton:pressed {
-                background-color: #b91c1c;
             }
         """)
 
-    
-    # LOAD TRANSACTIONS
-   
-    def load_transactions(self):
 
-        transactions = (
-            database.get_transactions()
+    # LOAD ALL
+    
+    def load_transactions(self):
+        self.apply_filters()
+
+    
+    # SEARCH + FILTER
+    
+    def apply_filters(self):
+
+        search_text = self.search_input.text()
+        trans_type = self.type_filter.currentText()
+
+        transactions = database.search_transactions(
+            search_text,
+            trans_type
         )
 
         self.table.setRowCount(0)
 
-        for row_number, row_data in enumerate(
-            transactions
-        ):
+        for row_number, row_data in enumerate(transactions):
 
             self.table.insertRow(row_number)
 
             transaction_id = row_data[0]
-
             date = row_data[1]
-
             category = row_data[2]
-
             description = row_data[3]
-
             amount_cents = row_data[4]
-
             trans_type = row_data[5]
 
-            # Convert cents to money
             amount = amount_cents / 100
 
             data = [
@@ -244,83 +192,76 @@ class HistoryPage(QWidget):
                 trans_type
             ]
 
-            for column_number, data_item in enumerate(
-                data
-            ):
+            for col, value in enumerate(data):
 
-                item = QTableWidgetItem(
-                    data_item
-                )
+                item = QTableWidgetItem(value)
+                item.setTextAlignment(Qt.AlignCenter)
 
-                item.setTextAlignment(
-                    Qt.AlignCenter
-                )
+                if col in [4, 5]:
+                    item.setForeground(
+                        QColor("#22c55e") if trans_type == "Income"
+                        else QColor("#ef4444")
+                    )
 
-                
-                # COLOR CODING
-                
-                if column_number in [4, 5]:
+                self.table.setItem(row_number, col, item)
 
-                    if trans_type == "Income":
+           
+            # EDIT BUTTON
+           
+            edit_btn = QPushButton("Edit")
+            edit_btn.setStyleSheet("background-color:#2563eb;")
 
-                        item.setForeground(
-                            QColor("#22c55e")
-                        )
-
-                    else:
-
-                        item.setForeground(
-                            QColor("#ef4444")
-                        )
-
-                self.table.setItem(
-                    row_number,
-                    column_number,
-                    item
-                )
-
-            
-            # DELETE BUTTON
-            
-            delete_button = QPushButton(
-                "Delete"
+            edit_btn.clicked.connect(
+                self.make_edit_handler(row_data)
             )
 
-            delete_button.clicked.connect(
-                lambda checked=False,
-                tid=transaction_id:
+            self.table.setCellWidget(row_number, 6, edit_btn)
+
+          
+            # DELETE BUTTON
+            
+            delete_btn = QPushButton("Delete")
+            delete_btn.setStyleSheet("background-color:#dc2626;")
+
+            delete_btn.clicked.connect(
+                lambda _, tid=transaction_id:
                 self.delete_transaction(tid)
             )
 
-            self.table.setCellWidget(
-                row_number,
-                6,
-                delete_button
-            )
+            self.table.setCellWidget(row_number, 7, delete_btn)
 
     
-    # DELETE TRANSACTION
+    # SAFE EDIT HANDLER
     
-    def delete_transaction(
-        self,
-        transaction_id
-    ):
+    def make_edit_handler(self, row_data):
+
+        def handler():
+            self.edit_transaction(row_data)
+
+        return handler
+
+
+    # DELETE
+    
+    def delete_transaction(self, transaction_id):
 
         reply = QMessageBox.question(
             self,
-            "Delete Transaction",
-            "Are you sure you want to delete this transaction?",
+            "Delete",
+            "Are you sure?",
             QMessageBox.Yes | QMessageBox.No
         )
 
         if reply == QMessageBox.Yes:
+            database.delete_transaction(transaction_id)
+            refresh_manager.data_changed.emit()
 
-            database.delete_transaction(
-                transaction_id
-            )
 
-            QMessageBox.information(
-                self,
-                "Deleted",
-                "Transaction deleted successfully."
-            )
+    # EDIT
+    
+    def edit_transaction(self, transaction):
+
+        dialog = EditTransactionDialog(transaction)
+
+        if dialog.exec():
+            self.load_transactions()

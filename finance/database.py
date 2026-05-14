@@ -248,8 +248,67 @@ def get_monthly_expenses():
     conn.close()
 
     return rows
+# UPDATE TRANSACTION
+def update_transaction(transaction_id, date, category, description, amount, trans_type):
 
+    conn = connect_db()
+    cursor = conn.cursor()
 
+    amount_cents = int(Decimal(str(amount)) * 100)
+
+    cursor.execute("""
+    UPDATE transactions
+    SET date = ?,
+        category = ?,
+        description = ?,
+        amount_cents = ?,
+        type = ?
+    WHERE id = ?
+    """, (
+        date,
+        category,
+        description,
+        amount_cents,
+        trans_type,
+        transaction_id
+    ))
+
+    conn.commit()
+    conn.close()
+
+    refresh_manager.data_changed.emit()
+    #search transactions
+def search_transactions(search_text="", trans_type="All"):
+
+    conn = connect_db()
+    cursor = conn.cursor()
+
+    query = """
+    SELECT *
+    FROM transactions
+    WHERE 1=1
+    """
+
+    params = []
+
+    if search_text:
+        query += """
+        AND (category LIKE ? OR description LIKE ?)
+        """
+        params.extend([f"%{search_text}%", f"%{search_text}%"])
+
+    if trans_type != "All":
+        query += " AND type = ?"
+        params.append(trans_type)
+
+    query += " ORDER BY date DESC"
+
+    cursor.execute(query, params)
+
+    rows = cursor.fetchall()
+    conn.close()
+
+    return rows
 
 # INITIALIZE DATABASE
 
