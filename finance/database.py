@@ -1,6 +1,8 @@
 import sqlite3
 from decimal import Decimal
 
+from refresh import refresh_manager
+
 DB_NAME = "finance_tracker.db"
 
 
@@ -11,9 +13,11 @@ def connect_db():
     return sqlite3.connect(DB_NAME)
 
 
+
 # CREATE TABLE
 
 def create_table():
+
     conn = connect_db()
     cursor = conn.cursor()
 
@@ -32,20 +36,14 @@ def create_table():
     conn.close()
 
 
-
 # ADD TRANSACTION
 
 def add_transaction(date, category, description, amount, trans_type):
-    """
-    amount should be entered like:
-    12.50
-    99.99
-    """
 
     conn = connect_db()
     cursor = conn.cursor()
 
-    # Convert to cents
+    # Convert money to cents
     amount_cents = int(Decimal(str(amount)) * 100)
 
     cursor.execute("""
@@ -63,18 +61,22 @@ def add_transaction(date, category, description, amount, trans_type):
     conn.commit()
     conn.close()
 
+    # AUTO REFRESH SIGNAL
+    refresh_manager.data_changed.emit()
+
 
 
 # GET ALL TRANSACTIONS
 
 def get_transactions():
+
     conn = connect_db()
     cursor = conn.cursor()
 
     cursor.execute("""
     SELECT *
     FROM transactions
-    ORDER BY date DESC
+    ORDER BY date DESC, id DESC
     """)
 
     rows = cursor.fetchall()
@@ -85,13 +87,14 @@ def get_transactions():
 
 
 
-# CALCULATE BALANCE
+# GET CURRENT BALANCE
 
 def get_balance():
+
     conn = connect_db()
     cursor = conn.cursor()
 
-    # Total income
+    # TOTAL INCOME
     cursor.execute("""
     SELECT SUM(amount_cents)
     FROM transactions
@@ -100,7 +103,7 @@ def get_balance():
 
     income = cursor.fetchone()[0]
 
-    # Total expenses
+    # TOTAL EXPENSES
     cursor.execute("""
     SELECT SUM(amount_cents)
     FROM transactions
@@ -123,6 +126,7 @@ def get_balance():
 # DELETE TRANSACTION
 
 def delete_transaction(transaction_id):
+
     conn = connect_db()
     cursor = conn.cursor()
 
@@ -133,6 +137,10 @@ def delete_transaction(transaction_id):
 
     conn.commit()
     conn.close()
+
+    # AUTO REFRESH SIGNAL
+    refresh_manager.data_changed.emit()
+
 
 
 # TOTAL INCOME
@@ -155,7 +163,6 @@ def get_total_income():
     return (result or 0) / 100
 
 
-
 # TOTAL EXPENSES
 
 def get_total_expenses():
@@ -174,7 +181,6 @@ def get_total_expenses():
     conn.close()
 
     return (result or 0) / 100
-
 
 
 # RECENT TRANSACTIONS
@@ -196,6 +202,9 @@ def get_recent_transactions(limit=5):
     conn.close()
 
     return rows
+
+
+
 # EXPENSES BY CATEGORY
 
 def get_expenses_by_category():
@@ -215,6 +224,8 @@ def get_expenses_by_category():
     conn.close()
 
     return rows
+
+
 
 # MONTHLY EXPENSES
 
@@ -237,6 +248,8 @@ def get_monthly_expenses():
     conn.close()
 
     return rows
+
+
 
 # INITIALIZE DATABASE
 

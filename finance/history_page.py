@@ -8,7 +8,6 @@ from PySide6.QtWidgets import (
     QMessageBox,
     QHeaderView,
     QAbstractItemView,
-    QHBoxLayout,
     QFrame
 )
 
@@ -17,38 +16,69 @@ from PySide6.QtGui import QColor, QFont
 
 import database
 
+from refresh import refresh_manager
+
 
 class HistoryPage(QWidget):
 
     def __init__(self):
         super().__init__()
 
+        
         # MAIN LAYOUT
         
-        self.layout = QVBoxLayout(self)
+        self.main_layout = QVBoxLayout(self)
 
-        self.layout.setContentsMargins(25, 25, 25, 25)
-        self.layout.setSpacing(20)
+        self.main_layout.setContentsMargins(
+            25,
+            25,
+            25,
+            25
+        )
 
+        self.main_layout.setSpacing(20)
+
+    
         # TITLE
         
-        self.title = QLabel("Transaction History")
-        self.title.setFont(QFont("Segoe UI", 22, QFont.Bold))
+        self.title = QLabel(
+            "Transaction History"
+        )
 
-        self.layout.addWidget(self.title)
+        self.title.setFont(
+            QFont(
+                "Segoe UI",
+                22,
+                QFont.Bold
+            )
+        )
+
+        self.main_layout.addWidget(
+            self.title
+        )
 
         
         # CONTAINER
         
         self.container = QFrame()
-        self.container.setObjectName("container")
 
-        self.container_layout = QVBoxLayout(self.container)
-        self.container_layout.setContentsMargins(20, 20, 20, 20)
+        self.container.setObjectName(
+            "container"
+        )
 
-        
-        # TABLE
+        self.container_layout = QVBoxLayout(
+            self.container
+        )
+
+        self.container_layout.setContentsMargins(
+            20,
+            20,
+            20,
+            20
+        )
+
     
+        # TABLE
         self.table = QTableWidget()
 
         self.table.setColumnCount(7)
@@ -63,7 +93,9 @@ class HistoryPage(QWidget):
             "Action"
         ])
 
+        
         # TABLE SETTINGS
+    
         self.table.horizontalHeader().setSectionResizeMode(
             QHeaderView.Stretch
         )
@@ -76,26 +108,41 @@ class HistoryPage(QWidget):
             QAbstractItemView.NoEditTriggers
         )
 
-        self.table.verticalHeader().setVisible(False)
+        self.table.verticalHeader().setVisible(
+            False
+        )
 
-        self.table.setAlternatingRowColors(True)
+        self.table.setAlternatingRowColors(
+            True
+        )
 
         self.table.setShowGrid(False)
 
         self.table.setMinimumHeight(500)
 
-        self.container_layout.addWidget(self.table)
+        self.container_layout.addWidget(
+            self.table
+        )
 
-        self.layout.addWidget(self.container)
+        self.main_layout.addWidget(
+            self.container
+        )
 
         
         # LOAD DATA
-        
+
         self.load_transactions()
 
         
-        # STYLES
+        # AUTO REFRESH
         
+        refresh_manager.data_changed.connect(
+            self.load_transactions
+        )
+
+    
+        # STYLES
+    
         self.setStyleSheet("""
             QWidget {
                 background-color: #0f172a;
@@ -158,25 +205,34 @@ class HistoryPage(QWidget):
 
     
     # LOAD TRANSACTIONS
-    
+   
     def load_transactions(self):
 
-        transactions = database.get_transactions()
+        transactions = (
+            database.get_transactions()
+        )
 
         self.table.setRowCount(0)
 
-        for row_number, row_data in enumerate(transactions):
+        for row_number, row_data in enumerate(
+            transactions
+        ):
 
             self.table.insertRow(row_number)
 
             transaction_id = row_data[0]
+
             date = row_data[1]
+
             category = row_data[2]
+
             description = row_data[3]
+
             amount_cents = row_data[4]
+
             trans_type = row_data[5]
 
-            # Convert cents back to money
+            # Convert cents to money
             amount = amount_cents / 100
 
             data = [
@@ -188,20 +244,34 @@ class HistoryPage(QWidget):
                 trans_type
             ]
 
-            for column_number, data_item in enumerate(data):
+            for column_number, data_item in enumerate(
+                data
+            ):
 
-                item = QTableWidgetItem(data_item)
+                item = QTableWidgetItem(
+                    data_item
+                )
 
-                item.setTextAlignment(Qt.AlignCenter)
+                item.setTextAlignment(
+                    Qt.AlignCenter
+                )
 
-                # COLOR CODE AMOUNT + TYPE
-                if column_number == 4 or column_number == 5:
+                
+                # COLOR CODING
+                
+                if column_number in [4, 5]:
 
                     if trans_type == "Income":
-                        item.setForeground(QColor("#22c55e"))
+
+                        item.setForeground(
+                            QColor("#22c55e")
+                        )
 
                     else:
-                        item.setForeground(QColor("#ef4444"))
+
+                        item.setForeground(
+                            QColor("#ef4444")
+                        )
 
                 self.table.setItem(
                     row_number,
@@ -209,13 +279,16 @@ class HistoryPage(QWidget):
                     item
                 )
 
-
+            
             # DELETE BUTTON
-           
-            delete_button = QPushButton("Delete")
+            
+            delete_button = QPushButton(
+                "Delete"
+            )
 
             delete_button.clicked.connect(
-                lambda checked=False, tid=transaction_id:
+                lambda checked=False,
+                tid=transaction_id:
                 self.delete_transaction(tid)
             )
 
@@ -225,9 +298,13 @@ class HistoryPage(QWidget):
                 delete_button
             )
 
+    
     # DELETE TRANSACTION
     
-    def delete_transaction(self, transaction_id):
+    def delete_transaction(
+        self,
+        transaction_id
+    ):
 
         reply = QMessageBox.question(
             self,
@@ -238,12 +315,12 @@ class HistoryPage(QWidget):
 
         if reply == QMessageBox.Yes:
 
-            database.delete_transaction(transaction_id)
+            database.delete_transaction(
+                transaction_id
+            )
 
             QMessageBox.information(
                 self,
                 "Deleted",
                 "Transaction deleted successfully."
             )
-
-            self.load_transactions()

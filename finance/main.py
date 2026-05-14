@@ -28,49 +28,77 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
 
+        
+        # WINDOW SETTINGS
+        
         self.setWindowTitle("Smart Finance Tracker")
         self.setMinimumSize(1200, 700)
 
-        # Ensure DB is ready
+        # Initialize database
         database.create_table()
 
+        
         # CENTRAL WIDGET
         
-        self.central = QWidget()
-        self.setCentralWidget(self.central)
+        self.central_widget = QWidget()
+        self.setCentralWidget(self.central_widget)
 
-        self.main_layout = QHBoxLayout(self.central)
+        self.main_layout = QHBoxLayout(self.central_widget)
+
         self.main_layout.setContentsMargins(0, 0, 0, 0)
         self.main_layout.setSpacing(0)
 
-    
+
         # SIDEBAR
         
         self.sidebar = QFrame()
-        self.sidebar.setFixedWidth(220)
         self.sidebar.setObjectName("sidebar")
 
+        self.sidebar.setFixedWidth(240)
+
         self.sidebar_layout = QVBoxLayout(self.sidebar)
+
         self.sidebar_layout.setContentsMargins(15, 20, 15, 20)
         self.sidebar_layout.setSpacing(12)
 
-        # App Title
-        title = QLabel("💰 Finance")
-        title.setFont(QFont("Segoe UI", 16, QFont.Bold))
-        title.setAlignment(Qt.AlignCenter)
+        
+        # APP TITLE
+        
+        self.logo = QLabel("💰 Smart Finance")
 
-        self.sidebar_layout.addWidget(title)
+        self.logo.setFont(QFont("Segoe UI", 18, QFont.Bold))
 
-        # Buttons
-        self.btn_dashboard = self.create_button("Dashboard")
-        self.btn_add = self.create_button("Add Transaction")
-        self.btn_history = self.create_button("History")
-        self.btn_analytics = self.create_button("Analytics")
+        self.logo.setAlignment(Qt.AlignCenter)
 
-        self.sidebar_layout.addWidget(self.btn_dashboard)
-        self.sidebar_layout.addWidget(self.btn_add)
-        self.sidebar_layout.addWidget(self.btn_history)
-        self.sidebar_layout.addWidget(self.btn_analytics)
+        self.sidebar_layout.addWidget(self.logo)
+
+        
+        # NAVIGATION BUTTONS
+        
+        self.dashboard_btn = self.create_sidebar_button(
+            "Dashboard"
+        )
+
+        self.add_btn = self.create_sidebar_button(
+            "Add Transaction"
+        )
+
+        self.history_btn = self.create_sidebar_button(
+            "History"
+        )
+
+        self.analytics_btn = self.create_sidebar_button(
+            "Analytics"
+        )
+
+        # ADD BUTTONS TO SIDEBAR
+        self.sidebar_layout.addWidget(self.dashboard_btn)
+
+        self.sidebar_layout.addWidget(self.add_btn)
+
+        self.sidebar_layout.addWidget(self.history_btn)
+
+        self.sidebar_layout.addWidget(self.analytics_btn)
 
         self.sidebar_layout.addStretch()
 
@@ -80,48 +108,80 @@ class MainWindow(QMainWindow):
         self.stack = QStackedWidget()
 
         self.dashboard_page = Dashboard()
-        self.add_page = AddTransactionPage()
+
+        self.add_transaction_page = AddTransactionPage()
+
         self.history_page = HistoryPage()
+
         self.analytics_page = AnalyticsPage()
 
+        # ADD PAGES
         self.stack.addWidget(self.dashboard_page)
-        self.stack.addWidget(self.add_page)
+
+        self.stack.addWidget(self.add_transaction_page)
+
         self.stack.addWidget(self.history_page)
+
         self.stack.addWidget(self.analytics_page)
 
-        
-        # ADD TO LAYOUT
+
+        # ADD TO MAIN LAYOUT
         
         self.main_layout.addWidget(self.sidebar)
+
         self.main_layout.addWidget(self.stack)
 
-        # BUTTON ACTIONS
+
+        # BUTTON CONNECTIONS
+        
+        self.dashboard_btn.clicked.connect(
+            lambda: self.switch_page(0)
+        )
+
+        self.add_btn.clicked.connect(
+            lambda: self.switch_page(1)
+        )
+
+        self.history_btn.clicked.connect(
+            lambda: self.switch_page(2)
+        )
+
+        self.analytics_btn.clicked.connect(
+            lambda: self.switch_page(3)
+        )
+
        
-        self.btn_dashboard.clicked.connect(lambda: self.switch_page(0))
-        self.btn_add.clicked.connect(lambda: self.switch_page(1))
-        self.btn_history.clicked.connect(lambda: self.switch_page(2))
-        self.btn_analytics.clicked.connect(lambda: self.switch_page(3))
+        # DEFAULT PAGE
+     
+        self.switch_page(0)
 
         
-        # STYLES
-        
+        # STYLESHEET
+      
         self.setStyleSheet("""
             QMainWindow {
                 background-color: #0f172a;
             }
 
+            QWidget {
+                color: white;
+                font-family: Segoe UI;
+            }
+
             #sidebar {
                 background-color: #1e293b;
+                border-right: 1px solid #334155;
             }
 
             QPushButton {
                 background-color: #334155;
                 color: white;
                 border: none;
+                border-radius: 12px;
                 padding: 12px;
-                border-radius: 10px;
                 text-align: left;
                 font-size: 14px;
+                font-weight: 600;
             }
 
             QPushButton:hover {
@@ -131,30 +191,42 @@ class MainWindow(QMainWindow):
             QPushButton:pressed {
                 background-color: #2563eb;
             }
+
+            QLabel {
+                color: white;
+            }
         """)
 
     
     # CREATE SIDEBAR BUTTON
-    def create_button(self, text):
 
-        btn = QPushButton(text)
-        btn.setCursor(Qt.PointingHandCursor)
-        btn.setMinimumHeight(45)
+    def create_sidebar_button(self, text):
 
-        return btn
+        button = QPushButton(text)
+
+        button.setCursor(Qt.PointingHandCursor)
+
+        button.setMinimumHeight(48)
+
+        return button
 
     
-    # SWITCH PAGES
+    # SWITCH PAGE
     
     def switch_page(self, index):
+
         self.stack.setCurrentIndex(index)
 
 
-# RUN APP
+
+# RUN APPLICATION
+
 if __name__ == "__main__":
+
     app = QApplication(sys.argv)
 
     window = MainWindow()
+
     window.show()
- 
+
     sys.exit(app.exec())
