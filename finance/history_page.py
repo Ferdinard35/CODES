@@ -20,6 +20,7 @@ from PySide6.QtGui import QColor, QFont
 import database
 from refresh import refresh_manager
 from edit_transaction_dialog import EditTransactionDialog
+from export_utils import export_transactions_to_csv
 
 
 class HistoryPage(QWidget):
@@ -27,23 +28,28 @@ class HistoryPage(QWidget):
     def __init__(self):
         super().__init__()
 
-
         # MAIN LAYOUT
-        
         self.main_layout = QVBoxLayout(self)
         self.main_layout.setContentsMargins(25, 25, 25, 25)
         self.main_layout.setSpacing(20)
 
-        
         # TITLE
-        
         self.title = QLabel("Transaction History")
         self.title.setFont(QFont("Segoe UI", 22, QFont.Bold))
         self.main_layout.addWidget(self.title)
 
-        
-        # FILTER BAR (SEARCH + TYPE)
-    
+        # EXPORT BUTTON
+        self.export_btn = QPushButton("Export CSV")
+        self.export_btn.setStyleSheet("""
+            background-color: #22c55e;
+            padding: 10px;
+            border-radius: 8px;
+            font-weight: bold;
+        """)
+        self.export_btn.clicked.connect(self.export_csv)
+        self.main_layout.addWidget(self.export_btn)
+
+        # FILTER BAR
         self.filter_layout = QHBoxLayout()
 
         self.search_input = QLineEdit()
@@ -61,30 +67,20 @@ class HistoryPage(QWidget):
         self.search_input.textChanged.connect(self.apply_filters)
         self.type_filter.currentTextChanged.connect(self.apply_filters)
 
-        
         # CONTAINER
-        
         self.container = QFrame()
         self.container.setObjectName("container")
 
         self.container_layout = QVBoxLayout(self.container)
         self.container_layout.setContentsMargins(20, 20, 20, 20)
 
-        
         # TABLE
-    
         self.table = QTableWidget()
         self.table.setColumnCount(8)
 
         self.table.setHorizontalHeaderLabels([
-            "ID",
-            "Date",
-            "Category",
-            "Description",
-            "Amount",
-            "Type",
-            "Edit",
-            "Delete"
+            "ID", "Date", "Category", "Description",
+            "Amount", "Type", "Edit", "Delete"
         ])
 
         self.table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
@@ -104,9 +100,7 @@ class HistoryPage(QWidget):
         # AUTO REFRESH
         refresh_manager.data_changed.connect(self.load_transactions)
 
-
         # STYLES
-        
         self.setStyleSheet("""
             QWidget {
                 background-color: #0f172a;
@@ -149,14 +143,26 @@ class HistoryPage(QWidget):
             }
         """)
 
-
-    # LOAD ALL
     
+    # EXPORT CSV
+    
+    def export_csv(self):
+        filename = export_transactions_to_csv()
+
+        QMessageBox.information(
+            self,
+            "Export Complete",
+            f"Data exported successfully:\n{filename}"
+        )
+
+  
+    # LOAD DATA
+   
     def load_transactions(self):
         self.apply_filters()
 
     
-    # SEARCH + FILTER
+    # FILTER LOGIC
     
     def apply_filters(self):
 
@@ -179,7 +185,7 @@ class HistoryPage(QWidget):
             category = row_data[2]
             description = row_data[3]
             amount_cents = row_data[4]
-            trans_type = row_data[5]
+            t_type = row_data[5]
 
             amount = amount_cents / 100
 
@@ -189,7 +195,7 @@ class HistoryPage(QWidget):
                 category,
                 description,
                 f"GHS {amount:,.2f}",
-                trans_type
+                t_type
             ]
 
             for col, value in enumerate(data):
@@ -199,45 +205,32 @@ class HistoryPage(QWidget):
 
                 if col in [4, 5]:
                     item.setForeground(
-                        QColor("#22c55e") if trans_type == "Income"
+                        QColor("#22c55e") if t_type == "Income"
                         else QColor("#ef4444")
                     )
 
                 self.table.setItem(row_number, col, item)
 
-           
             # EDIT BUTTON
-           
             edit_btn = QPushButton("Edit")
             edit_btn.setStyleSheet("background-color:#2563eb;")
-
-            edit_btn.clicked.connect(
-                self.make_edit_handler(row_data)
-            )
-
+            edit_btn.clicked.connect(self.make_edit_handler(row_data))
             self.table.setCellWidget(row_number, 6, edit_btn)
 
-          
             # DELETE BUTTON
-            
             delete_btn = QPushButton("Delete")
             delete_btn.setStyleSheet("background-color:#dc2626;")
-
             delete_btn.clicked.connect(
-                lambda _, tid=transaction_id:
-                self.delete_transaction(tid)
+                lambda _, tid=transaction_id: self.delete_transaction(tid)
             )
-
             self.table.setCellWidget(row_number, 7, delete_btn)
 
     
-    # SAFE EDIT HANDLER
-    
-    def make_edit_handler(self, row_data):
+    # EDIT HANDLER
 
+    def make_edit_handler(self, row_data):
         def handler():
             self.edit_transaction(row_data)
-
         return handler
 
 
@@ -256,9 +249,9 @@ class HistoryPage(QWidget):
             database.delete_transaction(transaction_id)
             refresh_manager.data_changed.emit()
 
-
-    # EDIT
     
+    # EDIT
+
     def edit_transaction(self, transaction):
 
         dialog = EditTransactionDialog(transaction)

@@ -310,6 +310,85 @@ def search_transactions(search_text="", trans_type="All"):
 
     return rows
 
+def get_all_transactions_for_export():
+
+    conn = connect_db()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+    SELECT date, category, description, amount_cents, type
+    FROM transactions
+    ORDER BY date DESC
+    """)
+
+    rows = cursor.fetchall()
+    conn.close()
+
+    return rows
+ 
+# MONTHLY SUMMARY 
+def get_monthly_summary():
+
+    conn = connect_db()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+    SELECT 
+        substr(date, 1, 7) AS month,
+        SUM(CASE WHEN type='Income' THEN amount_cents ELSE 0 END),
+        SUM(CASE WHEN type='Expense' THEN amount_cents ELSE 0 END)
+    FROM transactions
+    GROUP BY month
+    ORDER BY month
+    """)
+
+    rows = cursor.fetchall()
+    conn.close()
+
+    return rows
+
+def set_setting(key, value):
+
+    conn = connect_db()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS settings (
+        key TEXT PRIMARY KEY,
+        value TEXT
+    )
+    """)
+
+    cursor.execute("""
+    INSERT INTO settings (key, value)
+    VALUES (?, ?)
+    ON CONFLICT(key) DO UPDATE SET value=excluded.value
+    """, (key, value))
+
+    conn.commit()
+    conn.close()
+
+# GET SETTING
+def get_setting(key, default=None):
+
+    conn = connect_db()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS settings (
+        key TEXT PRIMARY KEY,
+        value TEXT
+    )
+    """)
+
+    cursor.execute("""
+    SELECT value FROM settings WHERE key=?
+    """, (key,))
+
+    row = cursor.fetchone()
+    conn.close()
+
+    return row[0] if row else default
 # INITIALIZE DATABASE
 
 create_table()

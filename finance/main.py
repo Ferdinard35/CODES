@@ -19,6 +19,9 @@ from dashboard import Dashboard
 from add_transaction import AddTransactionPage
 from history_page import HistoryPage
 from analytics_page import AnalyticsPage
+from monthly_report_page import MonthlyReportPage
+from theme_manager import ThemeManager
+from settings_page import SettingsPage
 
 import database
 
@@ -34,7 +37,6 @@ class MainWindow(QMainWindow):
         self.setWindowTitle("Smart Finance Tracker")
         self.setMinimumSize(1200, 700)
 
-        # Initialize database
         database.create_table()
 
         
@@ -44,61 +46,42 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(self.central_widget)
 
         self.main_layout = QHBoxLayout(self.central_widget)
-
         self.main_layout.setContentsMargins(0, 0, 0, 0)
         self.main_layout.setSpacing(0)
 
-
+        
         # SIDEBAR
         
         self.sidebar = QFrame()
         self.sidebar.setObjectName("sidebar")
-
         self.sidebar.setFixedWidth(240)
 
         self.sidebar_layout = QVBoxLayout(self.sidebar)
-
         self.sidebar_layout.setContentsMargins(15, 20, 15, 20)
         self.sidebar_layout.setSpacing(12)
 
-        
-        # APP TITLE
-        
+        # TITLE
         self.logo = QLabel("💰 Smart Finance")
-
         self.logo.setFont(QFont("Segoe UI", 18, QFont.Bold))
-
         self.logo.setAlignment(Qt.AlignCenter)
-
         self.sidebar_layout.addWidget(self.logo)
 
         
-        # NAVIGATION BUTTONS
+        # BUTTONS
         
-        self.dashboard_btn = self.create_sidebar_button(
-            "Dashboard"
-        )
+        self.dashboard_btn = self.create_sidebar_button("Dashboard")
+        self.add_btn = self.create_sidebar_button("Add Transaction")
+        self.history_btn = self.create_sidebar_button("History")
+        self.analytics_btn = self.create_sidebar_button("Analytics")
+        self.monthly_report_btn = self.create_sidebar_button("Monthly Report")
+        self.settings_btn = self.create_sidebar_button("Settings")
 
-        self.add_btn = self.create_sidebar_button(
-            "Add Transaction"
-        )
-
-        self.history_btn = self.create_sidebar_button(
-            "History"
-        )
-
-        self.analytics_btn = self.create_sidebar_button(
-            "Analytics"
-        )
-
-        # ADD BUTTONS TO SIDEBAR
         self.sidebar_layout.addWidget(self.dashboard_btn)
-
         self.sidebar_layout.addWidget(self.add_btn)
-
         self.sidebar_layout.addWidget(self.history_btn)
-
         self.sidebar_layout.addWidget(self.analytics_btn)
+        self.sidebar_layout.addWidget(self.monthly_report_btn)
+        self.sidebar_layout.addWidget(self.settings_btn)
 
         self.sidebar_layout.addStretch()
 
@@ -108,56 +91,43 @@ class MainWindow(QMainWindow):
         self.stack = QStackedWidget()
 
         self.dashboard_page = Dashboard()
-
         self.add_transaction_page = AddTransactionPage()
-
         self.history_page = HistoryPage()
-
         self.analytics_page = AnalyticsPage()
+        self.monthly_report_page = MonthlyReportPage()
+        self.settings_page = SettingsPage(self)
 
-        # ADD PAGES
-        self.stack.addWidget(self.dashboard_page)
+        self.stack.addWidget(self.dashboard_page)         # 0
+        self.stack.addWidget(self.add_transaction_page)    # 1
+        self.stack.addWidget(self.history_page)            # 2
+        self.stack.addWidget(self.analytics_page)          # 3
+        self.stack.addWidget(self.monthly_report_page)     # 4
+        self.stack.addWidget(self.settings_page)           # 5
 
-        self.stack.addWidget(self.add_transaction_page)
-
-        self.stack.addWidget(self.history_page)
-
-        self.stack.addWidget(self.analytics_page)
-
-
+        
         # ADD TO MAIN LAYOUT
         
         self.main_layout.addWidget(self.sidebar)
-
         self.main_layout.addWidget(self.stack)
 
-
-        # BUTTON CONNECTIONS
         
-        self.dashboard_btn.clicked.connect(
-            lambda: self.switch_page(0)
-        )
+        # BUTTON CONNECTIONS
+    
+        self.dashboard_btn.clicked.connect(lambda: self.switch_page(0))
+        self.add_btn.clicked.connect(lambda: self.switch_page(1))
+        self.history_btn.clicked.connect(lambda: self.switch_page(2))
+        self.analytics_btn.clicked.connect(lambda: self.switch_page(3))
+        self.monthly_report_btn.clicked.connect(lambda: self.switch_page(4))
+        self.settings_btn.clicked.connect(lambda: self.switch_page(5))
 
-        self.add_btn.clicked.connect(
-            lambda: self.switch_page(1)
-        )
-
-        self.history_btn.clicked.connect(
-            lambda: self.switch_page(2)
-        )
-
-        self.analytics_btn.clicked.connect(
-            lambda: self.switch_page(3)
-        )
-
-       
+    
         # DEFAULT PAGE
-     
+        
         self.switch_page(0)
 
         
-        # STYLESHEET
-      
+        # STYLES
+        
         self.setStyleSheet("""
             QMainWindow {
                 background-color: #0f172a;
@@ -198,34 +168,34 @@ class MainWindow(QMainWindow):
         """)
 
     
-    # CREATE SIDEBAR BUTTON
-
+    # CREATE BUTTON
+    
     def create_sidebar_button(self, text):
 
         button = QPushButton(text)
-
         button.setCursor(Qt.PointingHandCursor)
-
         button.setMinimumHeight(48)
-
         return button
 
     
-    # SWITCH PAGE
+    # SWITCH PAGES
     
     def switch_page(self, index):
-
         self.stack.setCurrentIndex(index)
 
 
 
-# RUN APPLICATION
+# RUN APP
 
 if __name__ == "__main__":
 
     app = QApplication(sys.argv)
 
     window = MainWindow()
+
+    # APPLY SAVED THEME
+    theme = database.get_setting("theme", "dark")
+    ThemeManager.apply_theme(app, theme)
 
     window.show()
 
