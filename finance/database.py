@@ -6,15 +6,14 @@ from refresh import refresh_manager
 DB_NAME = "finance_tracker.db"
 
 
-
 # CONNECT TO DATABASE
+
 
 def connect_db():
     return sqlite3.connect(DB_NAME)
 
 
-
-# CREATE TABLE
+# CREATE TRANSACTIONS TABLE
 
 def create_table():
 
@@ -35,6 +34,25 @@ def create_table():
     conn.commit()
     conn.close()
 
+# CREATE BUDGET TABLE
+
+
+def create_budget_table():
+
+    conn = connect_db()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS budgets (
+        month TEXT PRIMARY KEY,
+        amount_cents INTEGER NOT NULL
+    )
+    """)
+
+    conn.commit()
+    conn.close()
+
+
 
 # ADD TRANSACTION
 
@@ -43,7 +61,6 @@ def add_transaction(date, category, description, amount, trans_type):
     conn = connect_db()
     cursor = conn.cursor()
 
-    # Convert money to cents
     amount_cents = int(Decimal(str(amount)) * 100)
 
     cursor.execute("""
@@ -61,12 +78,12 @@ def add_transaction(date, category, description, amount, trans_type):
     conn.commit()
     conn.close()
 
-    # AUTO REFRESH SIGNAL
     refresh_manager.data_changed.emit()
 
 
 
 # GET ALL TRANSACTIONS
+
 
 def get_transactions():
 
@@ -85,16 +102,14 @@ def get_transactions():
 
     return rows
 
-
-
 # GET CURRENT BALANCE
+
 
 def get_balance():
 
     conn = connect_db()
     cursor = conn.cursor()
 
-    # TOTAL INCOME
     cursor.execute("""
     SELECT SUM(amount_cents)
     FROM transactions
@@ -103,7 +118,6 @@ def get_balance():
 
     income = cursor.fetchone()[0]
 
-    # TOTAL EXPENSES
     cursor.execute("""
     SELECT SUM(amount_cents)
     FROM transactions
@@ -138,12 +152,11 @@ def delete_transaction(transaction_id):
     conn.commit()
     conn.close()
 
-    # AUTO REFRESH SIGNAL
     refresh_manager.data_changed.emit()
 
 
-
 # TOTAL INCOME
+
 
 def get_total_income():
 
@@ -163,7 +176,9 @@ def get_total_income():
     return (result or 0) / 100
 
 
+
 # TOTAL EXPENSES
+
 
 def get_total_expenses():
 
@@ -181,7 +196,6 @@ def get_total_expenses():
     conn.close()
 
     return (result or 0) / 100
-
 
 # RECENT TRANSACTIONS
 
@@ -204,8 +218,8 @@ def get_recent_transactions(limit=5):
     return rows
 
 
-
 # EXPENSES BY CATEGORY
+
 
 def get_expenses_by_category():
 
@@ -229,6 +243,7 @@ def get_expenses_by_category():
 
 # MONTHLY EXPENSES
 
+
 def get_monthly_expenses():
 
     conn = connect_db()
@@ -248,8 +263,20 @@ def get_monthly_expenses():
     conn.close()
 
     return rows
+
+
+
 # UPDATE TRANSACTION
-def update_transaction(transaction_id, date, category, description, amount, trans_type):
+
+
+def update_transaction(
+    transaction_id,
+    date,
+    category,
+    description,
+    amount,
+    trans_type
+):
 
     conn = connect_db()
     cursor = conn.cursor()
@@ -277,7 +304,12 @@ def update_transaction(transaction_id, date, category, description, amount, tran
     conn.close()
 
     refresh_manager.data_changed.emit()
-    #search transactions
+
+
+
+# SEARCH TRANSACTIONS
+
+
 def search_transactions(search_text="", trans_type="All"):
 
     conn = connect_db()
@@ -292,12 +324,21 @@ def search_transactions(search_text="", trans_type="All"):
     params = []
 
     if search_text:
+
         query += """
-        AND (category LIKE ? OR description LIKE ?)
+        AND (
+            category LIKE ?
+            OR description LIKE ?
+        )
         """
-        params.extend([f"%{search_text}%", f"%{search_text}%"])
+
+        params.extend([
+            f"%{search_text}%",
+            f"%{search_text}%"
+        ])
 
     if trans_type != "All":
+
         query += " AND type = ?"
         params.append(trans_type)
 
@@ -306,9 +347,15 @@ def search_transactions(search_text="", trans_type="All"):
     cursor.execute(query, params)
 
     rows = cursor.fetchall()
+
     conn.close()
 
     return rows
+
+
+
+# EXPORT DATA
+
 
 def get_all_transactions_for_export():
 
@@ -316,36 +363,67 @@ def get_all_transactions_for_export():
     cursor = conn.cursor()
 
     cursor.execute("""
-    SELECT date, category, description, amount_cents, type
+    SELECT
+        date,
+        category,
+        description,
+        amount_cents,
+        type
     FROM transactions
     ORDER BY date DESC
     """)
 
     rows = cursor.fetchall()
+
     conn.close()
 
     return rows
- 
-# MONTHLY SUMMARY 
+
+# MONTHLY SUMMARY
+
+
 def get_monthly_summary():
 
     conn = connect_db()
     cursor = conn.cursor()
 
     cursor.execute("""
-    SELECT 
+    SELECT
         substr(date, 1, 7) AS month,
-        SUM(CASE WHEN type='Income' THEN amount_cents ELSE 0 END),
-        SUM(CASE WHEN type='Expense' THEN amount_cents ELSE 0 END)
+
+        SUM(
+            CASE
+                WHEN type='Income'
+                THEN amount_cents
+                ELSE 0
+            END
+        ),
+
+        SUM(
+            CASE
+                WHEN type='Expense'
+                THEN amount_cents
+                ELSE 0
+            END
+        )
+
     FROM transactions
+
     GROUP BY month
+
     ORDER BY month
     """)
 
     rows = cursor.fetchall()
+
     conn.close()
 
     return rows
+
+
+
+# SETTINGS
+
 
 def set_setting(key, value):
 
@@ -362,13 +440,14 @@ def set_setting(key, value):
     cursor.execute("""
     INSERT INTO settings (key, value)
     VALUES (?, ?)
-    ON CONFLICT(key) DO UPDATE SET value=excluded.value
+    ON CONFLICT(key)
+    DO UPDATE SET value=excluded.value
     """, (key, value))
 
     conn.commit()
     conn.close()
 
-# GET SETTING
+
 def get_setting(key, default=None):
 
     conn = connect_db()
@@ -382,13 +461,98 @@ def get_setting(key, default=None):
     """)
 
     cursor.execute("""
-    SELECT value FROM settings WHERE key=?
+    SELECT value
+    FROM settings
+    WHERE key=?
     """, (key,))
 
     row = cursor.fetchone()
+
     conn.close()
 
     return row[0] if row else default
+
+
+
+# SET BUDGET
+
+
+def set_budget(month, amount):
+
+    conn = connect_db()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS budgets (
+        month TEXT PRIMARY KEY,
+        amount_cents INTEGER NOT NULL
+    )
+    """)
+
+    amount_cents = int(float(amount) * 100)
+
+    cursor.execute("""
+    INSERT INTO budgets (month, amount_cents)
+    VALUES (?, ?)
+    ON CONFLICT(month)
+    DO UPDATE SET amount_cents=excluded.amount_cents
+    """, (month, amount_cents))
+
+    conn.commit()
+    conn.close()
+
+# GET BUDGET
+
+
+def get_budget(month):
+
+    conn = connect_db()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS budgets (
+        month TEXT PRIMARY KEY,
+        amount_cents INTEGER NOT NULL
+    )
+    """)
+
+    cursor.execute("""
+    SELECT amount_cents
+    FROM budgets
+    WHERE month = ?
+    """, (month,))
+
+    row = cursor.fetchone()
+
+    conn.close()
+
+    return row[0] if row else 0
+
+
+# GET MONTH EXPENSES
+
+def get_month_expenses(month):
+
+    conn = connect_db()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+    SELECT SUM(amount_cents)
+    FROM transactions
+    WHERE type = 'Expense'
+    AND substr(date, 1, 7) = ?
+    """, (month,))
+
+    result = cursor.fetchone()[0]
+
+    conn.close()
+
+    return result or 0
+
+
+
 # INITIALIZE DATABASE
 
+
 create_table()
+create_budget_table()

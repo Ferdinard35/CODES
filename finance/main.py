@@ -22,6 +22,7 @@ from analytics_page import AnalyticsPage
 from monthly_report_page import MonthlyReportPage
 from theme_manager import ThemeManager
 from settings_page import SettingsPage
+from budget_page import BudgetPage
 
 import database
 
@@ -75,6 +76,7 @@ class MainWindow(QMainWindow):
         self.analytics_btn = self.create_sidebar_button("Analytics")
         self.monthly_report_btn = self.create_sidebar_button("Monthly Report")
         self.settings_btn = self.create_sidebar_button("Settings")
+        self.budget_btn = self.create_sidebar_button("Budget")
 
         self.sidebar_layout.addWidget(self.dashboard_btn)
         self.sidebar_layout.addWidget(self.add_btn)
@@ -82,6 +84,7 @@ class MainWindow(QMainWindow):
         self.sidebar_layout.addWidget(self.analytics_btn)
         self.sidebar_layout.addWidget(self.monthly_report_btn)
         self.sidebar_layout.addWidget(self.settings_btn)
+        self.sidebar_layout.addWidget(self.budget_btn)
 
         self.sidebar_layout.addStretch()
 
@@ -96,6 +99,7 @@ class MainWindow(QMainWindow):
         self.analytics_page = AnalyticsPage()
         self.monthly_report_page = MonthlyReportPage()
         self.settings_page = SettingsPage(self)
+        self.budget_page = BudgetPage()
 
         self.stack.addWidget(self.dashboard_page)         # 0
         self.stack.addWidget(self.add_transaction_page)    # 1
@@ -103,6 +107,7 @@ class MainWindow(QMainWindow):
         self.stack.addWidget(self.analytics_page)          # 3
         self.stack.addWidget(self.monthly_report_page)     # 4
         self.stack.addWidget(self.settings_page)           # 5
+        self.stack.addWidget(self.budget_page)            # 6
 
         
         # ADD TO MAIN LAYOUT
@@ -119,7 +124,7 @@ class MainWindow(QMainWindow):
         self.analytics_btn.clicked.connect(lambda: self.switch_page(3))
         self.monthly_report_btn.clicked.connect(lambda: self.switch_page(4))
         self.settings_btn.clicked.connect(lambda: self.switch_page(5))
-
+        self.budget_btn.clicked.connect(lambda: self.switch_page(6))
     
         # DEFAULT PAGE
         
