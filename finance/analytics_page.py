@@ -9,13 +9,12 @@ from PySide6.QtWidgets import (
 from PySide6.QtGui import QFont
 from PySide6.QtCore import Qt
 
-from matplotlib.backends.backend_qtagg import (
-    FigureCanvasQTAgg as FigureCanvas
-)
-
+from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 
 import database
+from app_styles import theme_colors
+from theme_manager import ThemeManager
 from refresh import refresh_manager
 
 
@@ -24,398 +23,153 @@ class AnalyticsPage(QWidget):
     def __init__(self):
         super().__init__()
 
-    
-        # MAIN LAYOUT
-    
         self.main_layout = QVBoxLayout(self)
+        self.main_layout.setContentsMargins(36, 36, 36, 36)
+        self.main_layout.setSpacing(6)
 
-        self.main_layout.setContentsMargins(25, 25, 25, 25)
-        self.main_layout.setSpacing(25)
+        title = QLabel("Financial Analytics")
+        title.setObjectName("PageTitle")
+        self.main_layout.addWidget(title)
 
-        
-        # TITLE
-    
-        self.title = QLabel("Financial Analytics")
+        subtitle = QLabel("Visualize spending by category and month.")
+        subtitle.setObjectName("Subtitle")
+        self.main_layout.addWidget(subtitle)
 
-        self.title.setFont(
-            QFont("Segoe UI", 24, QFont.Bold)
-        )
+        self.main_layout.addSpacing(16)
 
-        self.main_layout.addWidget(self.title)
+        # ── STAT CARDS ──
+        stats_row = QHBoxLayout()
+        stats_row.setSpacing(16)
 
-        
-        # STATS LAYOUT
-    
-        self.stats_layout = QHBoxLayout()
+        self.balance_card, self.balance_value = self._stat_card("Current Balance", "primary")
+        self.income_card,  self.income_value  = self._stat_card("Total Income",    "success")
+        self.expense_card, self.expense_value = self._stat_card("Total Expenses",  "danger")
 
-        self.stats_layout.setSpacing(20)
+        stats_row.addWidget(self.balance_card)
+        stats_row.addWidget(self.income_card)
+        stats_row.addWidget(self.expense_card)
+        self.main_layout.addLayout(stats_row)
 
-        self.main_layout.addLayout(self.stats_layout)
+        self.main_layout.addSpacing(8)
 
-        
-        # CREATE STAT CARDS
-        
-        self.balance_card, self.balance_value = (
-            self.create_stat_card(
-                "Current Balance",
-                "#3b82f6"
-            )
-        )
+        # ── CHARTS ──
+        charts_row = QHBoxLayout()
+        charts_row.setSpacing(16)
 
-        self.income_card, self.income_value = (
-            self.create_stat_card(
-                "Total Income",
-                "#22c55e"
-            )
-        )
+        colors = self._colors()
 
-        self.expense_card, self.expense_value = (
-            self.create_stat_card(
-                "Total Expenses",
-                "#ef4444"
-            )
-        )
+        # Pie chart
+        self.pie_frame = QFrame()
+        self.pie_frame.setObjectName("ChartCard")
+        pie_layout = QVBoxLayout(self.pie_frame)
+        pie_layout.setContentsMargins(20, 20, 20, 20)
+        pie_layout.setSpacing(10)
 
-        self.stats_layout.addWidget(
-            self.balance_card
-        )
+        pie_title = QLabel("Expense Breakdown")
+        pie_title.setObjectName("SectionTitle")
+        pie_layout.addWidget(pie_title)
 
-        self.stats_layout.addWidget(
-            self.income_card
-        )
+        self.pie_figure = Figure(facecolor=colors["surface"])
+        self.pie_canvas = FigureCanvas(self.pie_figure)
+        pie_layout.addWidget(self.pie_canvas)
 
-        self.stats_layout.addWidget(
-            self.expense_card
-        )
+        # Line chart
+        self.line_frame = QFrame()
+        self.line_frame.setObjectName("ChartCard")
+        line_layout = QVBoxLayout(self.line_frame)
+        line_layout.setContentsMargins(20, 20, 20, 20)
+        line_layout.setSpacing(10)
 
-        
-        # CHARTS LAYOUT
-        
-        self.charts_layout = QHBoxLayout()
+        line_title = QLabel("Monthly Expenses")
+        line_title.setObjectName("SectionTitle")
+        line_layout.addWidget(line_title)
 
-        self.charts_layout.setSpacing(20)
+        self.line_figure = Figure(facecolor=colors["surface"])
+        self.line_canvas = FigureCanvas(self.line_figure)
+        line_layout.addWidget(self.line_canvas)
 
-        
-        # PIE CHART CARD
-        
-        self.pie_chart_card = QFrame()
+        charts_row.addWidget(self.pie_frame)
+        charts_row.addWidget(self.line_frame)
+        self.main_layout.addLayout(charts_row)
 
-        self.pie_chart_card.setObjectName(
-            "chartCard"
-        )
-
-        self.pie_layout = QVBoxLayout(
-            self.pie_chart_card
-        )
-
-        self.pie_title = QLabel(
-            "Expense Breakdown"
-        )
-
-        self.pie_title.setFont(
-            QFont("Segoe UI", 16, QFont.Bold)
-        )
-
-        self.pie_layout.addWidget(
-            self.pie_title
-        )
-
-        self.pie_figure = Figure(
-            facecolor="#1e293b"
-        )
-
-        self.pie_canvas = FigureCanvas(
-            self.pie_figure
-        )
-
-        self.pie_layout.addWidget(
-            self.pie_canvas
-        )
-
-        self.charts_layout.addWidget(
-            self.pie_chart_card
-        )
-
-        
-        # LINE CHART CARD
-       
-        self.line_chart_card = QFrame()
-
-        self.line_chart_card.setObjectName(
-            "chartCard"
-        )
-
-        self.line_layout = QVBoxLayout(
-            self.line_chart_card
-        )
-
-        self.line_title = QLabel(
-            "Monthly Expenses"
-        )
-
-        self.line_title.setFont(
-            QFont("Segoe UI", 16, QFont.Bold)
-        )
-
-        self.line_layout.addWidget(
-            self.line_title
-        )
-
-        self.line_figure = Figure(
-            facecolor="#1e293b"
-        )
-
-        self.line_canvas = FigureCanvas(
-            self.line_figure
-        )
-
-        self.line_layout.addWidget(
-            self.line_canvas
-        )
-
-        self.charts_layout.addWidget(
-            self.line_chart_card
-        )
-
-        self.main_layout.addLayout(
-            self.charts_layout
-        )
-
-        
-        # LOAD DATA
-        
         self.load_charts()
+        refresh_manager.data_changed.connect(self.load_charts)
 
-       
-        # AUTO REFRESH
-        
-        refresh_manager.data_changed.connect(
-            self.load_charts
-        )
-
-        
-        # STYLES
-        
-        self.setStyleSheet("""
-            QWidget {
-                background-color: #0f172a;
-                color: white;
-                font-family: Segoe UI;
-            }
-
-            QLabel {
-                color: white;
-            }
-
-            QFrame {
-                background-color: #1e293b;
-                border-radius: 18px;
-            }
-
-            #chartCard {
-                background-color: #1e293b;
-                border-radius: 18px;
-                padding: 10px;
-            }
-        """)
-
-    
-    # CREATE STAT CARD
-    
-    def create_stat_card(
-        self,
-        title,
-        color
-    ):
-
+    def _stat_card(self, title, accent):
         card = QFrame()
-
+        card.setObjectName("Card")
         layout = QVBoxLayout(card)
+        layout.setContentsMargins(24, 22, 24, 22)
+        layout.setSpacing(8)
 
-        layout.setContentsMargins(
-            20,
-            20,
-            20,
-            20
-        )
+        t = QLabel(title.upper())
+        t.setObjectName("MetricTitle")
 
-        layout.setSpacing(10)
+        v = QLabel("GHS 0.00")
+        v.setObjectName("MetricValue")
+        v.setProperty("accent", accent)
 
-        title_label = QLabel(title)
-
-        title_label.setFont(
-            QFont("Segoe UI", 12)
-        )
-
-        value_label = QLabel("GHS 0.00")
-
-        value_label.setFont(
-            QFont(
-                "Segoe UI",
-                22,
-                QFont.Bold
-            )
-        )
-
-        value_label.setStyleSheet(f"""
-            color: {color};
-        """)
-
-        layout.addWidget(title_label)
-
-        layout.addWidget(value_label)
-
-        return card, value_label
-
-    
-    # LOAD EVERYTHING
+        layout.addWidget(t)
+        layout.addWidget(v)
+        return card, v
 
     def load_charts(self):
+        self.balance_value.setText(f"GHS {database.get_balance():,.2f}")
+        self.income_value.setText(f"GHS {database.get_total_income():,.2f}")
+        self.expense_value.setText(f"GHS {database.get_total_expenses():,.2f}")
+        self._draw_pie()
+        self._draw_line()
 
-        # LOAD CARD VALUES
-        balance = database.get_balance()
-
-        income = database.get_total_income()
-
-        expenses = database.get_total_expenses()
-
-        self.balance_value.setText(
-            f"GHS {balance:,.2f}"
-        )
-
-        self.income_value.setText(
-            f"GHS {income:,.2f}"
-        )
-
-        self.expense_value.setText(
-            f"GHS {expenses:,.2f}"
-        )
-
-        # LOAD CHARTS
-        self.load_pie_chart()
-
-        self.load_line_chart()
-
-    
-    # LOAD PIE CHART
-    def load_pie_chart(self):
-
-        data = (
-            database.get_expenses_by_category()
-        )
-
-        categories = []
-
-        amounts = []
-
-        for row in data:
-
-            category = row[0]
-
-            amount = row[1] / 100
-
-            categories.append(category)
-
-            amounts.append(amount)
+    def _draw_pie(self):
+        c = self._colors()
+        data = database.get_expenses_by_category()
+        categories = [r[0] for r in data]
+        amounts    = [(r[1] or 0) / 100 for r in data]
 
         self.pie_figure.clear()
-
         ax = self.pie_figure.add_subplot(111)
+        ax.set_facecolor(c["surface"])
+        self.pie_figure.patch.set_facecolor(c["surface"])
 
         if amounts:
-
-            ax.pie(
-                amounts,
-                labels=categories,
-                autopct="%1.1f%%"
-            )
-
+            ax.pie(amounts, labels=categories, autopct="%1.1f%%",
+                   textprops={"color": c["text"]})
         else:
-
-            ax.text(
-                0.5,
-                0.5,
-                "No Expense Data",
-                ha="center",
-                va="center",
-                color="white",
-                fontsize=14
-            )
-
-        ax.set_facecolor("#1e293b")
+            ax.text(0.5, 0.5, "No expense data", ha="center", va="center",
+                    color=c["muted"], fontsize=13)
 
         self.pie_canvas.draw()
 
-    
-    # LOAD LINE CHART
-    
-    def load_line_chart(self):
-
-        data = (
-            database.get_monthly_expenses()
-        )
-
-        months = []
-
-        expenses = []
-
-        for row in data:
-
-            month = row[0]
-
-            amount = row[1] / 100
-
-            months.append(month)
-
-            expenses.append(amount)
+    def _draw_line(self):
+        c = self._colors()
+        data   = database.get_monthly_expenses()
+        months = [r[0] for r in data]
+        values = [(r[1] or 0) / 100 for r in data]
 
         self.line_figure.clear()
-
         ax = self.line_figure.add_subplot(111)
+        ax.set_facecolor(c["surface"])
+        self.line_figure.patch.set_facecolor(c["surface"])
 
-        if expenses:
-
-            ax.plot(
-                months,
-                expenses,
-                marker="o",
-                linewidth=3
-            )
-
+        if values:
+            ax.plot(months, values, marker="o", linewidth=2.5, color=c["primary"])
         else:
+            ax.text(0.5, 0.5, "No monthly data", ha="center", va="center",
+                    color=c["muted"], fontsize=13)
 
-            ax.text(
-                0.5,
-                0.5,
-                "No Monthly Data",
-                ha="center",
-                va="center",
-                color="white",
-                fontsize=14
-            )
-
-        ax.set_title(
-            "Monthly Expense Trend",
-            color="white",
-            fontsize=14
-        )
-
-        ax.set_xlabel(
-            "Month",
-            color="white"
-        )
-
-        ax.set_ylabel(
-            "Expenses (GHS)",
-            color="white"
-        )
-
-        ax.tick_params(colors="white")
-
-        ax.set_facecolor("#1e293b")
-
-        self.line_figure.patch.set_facecolor(
-            "#1e293b"
-        )
+        ax.set_title("Monthly Expense Trend", color=c["text"], fontsize=13, pad=10)
+        ax.set_xlabel("Month", color=c["muted"], fontsize=11)
+        ax.set_ylabel("GHS", color=c["muted"], fontsize=11)
+        ax.tick_params(colors=c["muted"])
+        ax.grid(True, alpha=0.15, color=c["border"])
+        for spine in ax.spines.values():
+            spine.set_edgecolor(c["border"])
 
         self.line_canvas.draw()
+
+    def _colors(self):
+        theme = database.get_setting("theme", ThemeManager.DARK)
+        return theme_colors(theme)
+
+    def refresh_theme(self):
+        self.load_charts()

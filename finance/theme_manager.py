@@ -2,6 +2,7 @@ from PySide6.QtGui import QPalette, QColor
 from PySide6.QtWidgets import QApplication
 
 import database
+from app_styles import get_stylesheet, theme_colors
 
 
 class ThemeManager:
@@ -10,41 +11,31 @@ class ThemeManager:
     LIGHT = "light"
 
     @staticmethod
-    def apply_theme(app: QApplication, theme="dark"):
-
-        if theme == ThemeManager.DARK:
-            ThemeManager.apply_dark(app)
-        else:
-            ThemeManager.apply_light(app)
-
-        database.set_setting("theme", theme)
-
-    @staticmethod
-    def apply_dark(app):
+    def apply_theme(app, theme="dark", save=True):
+        theme = ThemeManager.normalize_theme(theme)
+        target_app = QApplication.instance() or app
+        colors = theme_colors(theme)
 
         palette = QPalette()
+        palette.setColor(QPalette.Window,          QColor(colors["background"]))
+        palette.setColor(QPalette.WindowText,      QColor(colors["text"]))
+        palette.setColor(QPalette.Base,            QColor(colors["field"]))
+        palette.setColor(QPalette.AlternateBase,   QColor(colors["surface_alt"]))
+        palette.setColor(QPalette.Text,            QColor(colors["text"]))
+        palette.setColor(QPalette.Button,          QColor(colors["primary"]))
+        palette.setColor(QPalette.ButtonText,      QColor("#ffffff"))
+        palette.setColor(QPalette.Highlight,       QColor(colors["primary"]))
+        palette.setColor(QPalette.HighlightedText, QColor("#ffffff"))
 
-        palette.setColor(QPalette.Window, QColor("#0f172a"))
-        palette.setColor(QPalette.WindowText, QColor("#ffffff"))
-        palette.setColor(QPalette.Base, QColor("#1e293b"))
-        palette.setColor(QPalette.AlternateBase, QColor("#334155"))
-        palette.setColor(QPalette.Text, QColor("#ffffff"))
-        palette.setColor(QPalette.Button, QColor("#1e293b"))
-        palette.setColor(QPalette.ButtonText, QColor("#ffffff"))
+        target_app.setPalette(palette)
+        target_app.setProperty("theme", theme)
+        target_app.setStyleSheet(get_stylesheet(theme))
 
-        app.setPalette(palette)
+        if save:
+            database.set_setting("theme", theme)
 
     @staticmethod
-    def apply_light(app):
-
-        palette = QPalette()
-
-        palette.setColor(QPalette.Window, QColor("#f1f5f9"))
-        palette.setColor(QPalette.WindowText, QColor("#0f172a"))
-        palette.setColor(QPalette.Base, QColor("#ffffff"))
-        palette.setColor(QPalette.AlternateBase, QColor("#e2e8f0"))
-        palette.setColor(QPalette.Text, QColor("#0f172a"))
-        palette.setColor(QPalette.Button, QColor("#e2e8f0"))
-        palette.setColor(QPalette.ButtonText, QColor("#0f172a"))
-
-        app.setPalette(palette)
+    def normalize_theme(theme):
+        if theme not in [ThemeManager.DARK, ThemeManager.LIGHT]:
+            return ThemeManager.DARK
+        return theme

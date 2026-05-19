@@ -11,7 +11,8 @@ from PySide6.QtWidgets import (
     QAbstractItemView,
     QFrame,
     QLineEdit,
-    QComboBox
+    QComboBox,
+    QSizePolicy
 )
 
 from PySide6.QtCore import Qt
@@ -21,6 +22,7 @@ import database
 from refresh import refresh_manager
 from edit_transaction_dialog import EditTransactionDialog
 from export_utils import export_transactions_to_csv
+from table_utils import fit_table_height_to_rows
 
 
 class HistoryPage(QWidget):
@@ -28,233 +30,173 @@ class HistoryPage(QWidget):
     def __init__(self):
         super().__init__()
 
-        # MAIN LAYOUT
         self.main_layout = QVBoxLayout(self)
-        self.main_layout.setContentsMargins(25, 25, 25, 25)
-        self.main_layout.setSpacing(20)
+        self.main_layout.setContentsMargins(36, 36, 36, 36)
+        self.main_layout.setSpacing(6)
 
-        # TITLE
-        self.title = QLabel("Transaction History")
-        self.title.setFont(QFont("Segoe UI", 22, QFont.Bold))
-        self.main_layout.addWidget(self.title)
+        # ── HEADER ──
+        header_row = QHBoxLayout()
 
-        # EXPORT BUTTON
-        self.export_btn = QPushButton("Export CSV")
-        self.export_btn.setStyleSheet("""
-            background-color: #22c55e;
-            padding: 10px;
-            border-radius: 8px;
-            font-weight: bold;
-        """)
+        title_col = QVBoxLayout()
+        title_col.setSpacing(4)
+        title = QLabel("Transaction History")
+        title.setObjectName("PageTitle")
+        subtitle = QLabel("Search, review, edit, and remove saved transaction records.")
+        subtitle.setObjectName("Subtitle")
+        title_col.addWidget(title)
+        title_col.addWidget(subtitle)
+
+        self.export_btn = QPushButton("  ↓  Export CSV")
+        self.export_btn.setObjectName("SuccessButton")
+        self.export_btn.setMinimumHeight(38)
+        self.export_btn.setMinimumWidth(130)
+        self.export_btn.setCursor(Qt.PointingHandCursor)
         self.export_btn.clicked.connect(self.export_csv)
-        self.main_layout.addWidget(self.export_btn)
 
-        # FILTER BAR
-        self.filter_layout = QHBoxLayout()
+        header_row.addLayout(title_col)
+        header_row.addStretch()
+        header_row.addWidget(self.export_btn)
+        self.main_layout.addLayout(header_row)
+
+        self.main_layout.addSpacing(14)
+
+        # ── FILTER BAR ──
+        filter_card = QFrame()
+        filter_card.setObjectName("FormCard")
+        filter_layout = QHBoxLayout(filter_card)
+        filter_layout.setContentsMargins(16, 12, 16, 12)
+        filter_layout.setSpacing(12)
 
         self.search_input = QLineEdit()
         self.search_input.setPlaceholderText("Search category or description...")
+        self.search_input.setMinimumHeight(38)
 
         self.type_filter = QComboBox()
         self.type_filter.addItems(["All", "Income", "Expense"])
+        self.type_filter.setMinimumHeight(38)
+        self.type_filter.setFixedWidth(130)
 
-        self.filter_layout.addWidget(self.search_input)
-        self.filter_layout.addWidget(self.type_filter)
+        filter_layout.addWidget(self.search_input)
+        filter_layout.addWidget(self.type_filter)
+        self.main_layout.addWidget(filter_card)
 
-        self.main_layout.addLayout(self.filter_layout)
-
-        # CONNECT FILTERS
         self.search_input.textChanged.connect(self.apply_filters)
         self.type_filter.currentTextChanged.connect(self.apply_filters)
 
-        # CONTAINER
+        # ── TABLE CONTAINER ──
         self.container = QFrame()
-        self.container.setObjectName("container")
+        self.container.setObjectName("TableCard")
+        self.container.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Maximum)
 
-        self.container_layout = QVBoxLayout(self.container)
-        self.container_layout.setContentsMargins(20, 20, 20, 20)
+        container_layout = QVBoxLayout(self.container)
+        container_layout.setContentsMargins(0, 0, 0, 0)
 
-        # TABLE
         self.table = QTableWidget()
         self.table.setColumnCount(8)
-
         self.table.setHorizontalHeaderLabels([
             "ID", "Date", "Category", "Description",
             "Amount", "Type", "Edit", "Delete"
         ])
 
-        self.table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        header = self.table.horizontalHeader()
+        header.setSectionResizeMode(QHeaderView.Interactive)
+        header.setSectionResizeMode(0, QHeaderView.ResizeToContents)
+        header.setSectionResizeMode(1, QHeaderView.ResizeToContents)
+        header.setSectionResizeMode(2, QHeaderView.ResizeToContents)
+        header.setSectionResizeMode(3, QHeaderView.Stretch)
+        header.setSectionResizeMode(4, QHeaderView.ResizeToContents)
+        header.setSectionResizeMode(5, QHeaderView.ResizeToContents)
+        header.setSectionResizeMode(6, QHeaderView.ResizeToContents)
+        header.setSectionResizeMode(7, QHeaderView.ResizeToContents)
+
         self.table.setSelectionBehavior(QAbstractItemView.SelectRows)
         self.table.setEditTriggers(QAbstractItemView.NoEditTriggers)
         self.table.verticalHeader().setVisible(False)
         self.table.setAlternatingRowColors(True)
         self.table.setShowGrid(False)
-        self.table.setMinimumHeight(500)
 
-        self.container_layout.addWidget(self.table)
+        container_layout.addWidget(self.table)
         self.main_layout.addWidget(self.container)
 
-        # LOAD DATA
         self.load_transactions()
 
-        # AUTO REFRESH
+        try:
+            refresh_manager.data_changed.disconnect(self.load_transactions)
+        except Exception:
+            pass
         refresh_manager.data_changed.connect(self.load_transactions)
 
-        # STYLES
-        self.setStyleSheet("""
-            QWidget {
-                background-color: #0f172a;
-                color: white;
-                font-family: Segoe UI;
-            }
-
-            QLineEdit, QComboBox {
-                padding: 10px;
-                border-radius: 8px;
-                background-color: #1e293b;
-                color: white;
-                border: 1px solid #334155;
-            }
-
-            #container {
-                background-color: #1e293b;
-                border-radius: 18px;
-            }
-
-            QTableWidget {
-                background-color: #1e293b;
-                border: none;
-                border-radius: 12px;
-                font-size: 14px;
-            }
-
-            QHeaderView::section {
-                background-color: #334155;
-                color: white;
-                padding: 12px;
-                font-weight: bold;
-            }
-
-            QPushButton {
-                color: white;
-                border-radius: 8px;
-                padding: 6px;
-                font-weight: bold;
-            }
-        """)
-
-    
-    # EXPORT CSV
-    
     def export_csv(self):
         filename = export_transactions_to_csv()
+        QMessageBox.information(self, "Export Complete", f"Data exported:\n{filename}")
 
-        QMessageBox.information(
-            self,
-            "Export Complete",
-            f"Data exported successfully:\n{filename}"
-        )
-
-  
-    # LOAD DATA
-   
     def load_transactions(self):
         self.apply_filters()
 
-    
-    # FILTER LOGIC
-    
     def apply_filters(self):
-
-        search_text = self.search_input.text()
-        trans_type = self.type_filter.currentText()
-
-        transactions = database.search_transactions(
-            search_text,
-            trans_type
-        )
+        search_text = self.search_input.text().strip()
+        trans_type  = self.type_filter.currentText()
+        transactions = database.search_transactions(search_text, trans_type)
 
         self.table.setRowCount(0)
 
         for row_number, row_data in enumerate(transactions):
-
             self.table.insertRow(row_number)
 
             transaction_id = row_data[0]
-            date = row_data[1]
-            category = row_data[2]
-            description = row_data[3]
-            amount_cents = row_data[4]
-            t_type = row_data[5]
+            date        = row_data[1] or ""
+            category    = row_data[2] or ""
+            description = row_data[3] or ""
+            amount      = (row_data[4] or 0) / 100
+            t_type      = row_data[5] or ""
 
-            amount = amount_cents / 100
-
-            data = [
-                str(transaction_id),
-                date,
-                category,
-                description,
-                f"GHS {amount:,.2f}",
-                t_type
+            values = [
+                str(transaction_id), date, category, description,
+                f"GHS {amount:,.2f}", t_type
             ]
 
-            for col, value in enumerate(data):
-
+            for col, value in enumerate(values):
                 item = QTableWidgetItem(value)
-                item.setTextAlignment(Qt.AlignCenter)
+                item.setTextAlignment(Qt.AlignVCenter | Qt.AlignLeft)
 
-                if col in [4, 5]:
+                if col == 4:
                     item.setForeground(
-                        QColor("#22c55e") if t_type == "Income"
-                        else QColor("#ef4444")
+                        QColor("#22c55e") if t_type == "Income" else QColor("#ef4444")
                     )
-
                 self.table.setItem(row_number, col, item)
 
-            # EDIT BUTTON
+            # Edit button
             edit_btn = QPushButton("Edit")
-            edit_btn.setStyleSheet("background-color:#2563eb;")
-            edit_btn.clicked.connect(self.make_edit_handler(row_data))
+            edit_btn.setObjectName("SecondaryButton")
+            edit_btn.setFixedHeight(30)
+            edit_btn.setCursor(Qt.PointingHandCursor)
+            edit_btn.clicked.connect(
+                lambda _, data=row_data: self.edit_transaction(data)
+            )
             self.table.setCellWidget(row_number, 6, edit_btn)
 
-            # DELETE BUTTON
+            # Delete button
             delete_btn = QPushButton("Delete")
-            delete_btn.setStyleSheet("background-color:#dc2626;")
+            delete_btn.setObjectName("DangerButton")
+            delete_btn.setFixedHeight(30)
+            delete_btn.setCursor(Qt.PointingHandCursor)
             delete_btn.clicked.connect(
                 lambda _, tid=transaction_id: self.delete_transaction(tid)
             )
             self.table.setCellWidget(row_number, 7, delete_btn)
 
-    
-    # EDIT HANDLER
+        fit_table_height_to_rows(self.table, min_rows=0, max_rows=14)
 
-    def make_edit_handler(self, row_data):
-        def handler():
-            self.edit_transaction(row_data)
-        return handler
-
-
-    # DELETE
-    
     def delete_transaction(self, transaction_id):
-
         reply = QMessageBox.question(
-            self,
-            "Delete",
-            "Are you sure?",
+            self, "Delete", "Are you sure you want to delete this transaction?",
             QMessageBox.Yes | QMessageBox.No
         )
-
         if reply == QMessageBox.Yes:
             database.delete_transaction(transaction_id)
             refresh_manager.data_changed.emit()
 
-    
-    # EDIT
-
     def edit_transaction(self, transaction):
-
         dialog = EditTransactionDialog(transaction)
-
         if dialog.exec():
             self.load_transactions()

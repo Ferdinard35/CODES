@@ -11,6 +11,8 @@ from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 
 import database
+from app_styles import theme_colors
+from theme_manager import ThemeManager
 
 
 class MonthlyReportPage(QWidget):
@@ -18,186 +20,178 @@ class MonthlyReportPage(QWidget):
     def __init__(self):
         super().__init__()
 
-        
-        # MAIN LAYOUT
-        
-        self.layout = QVBoxLayout(self)
-        self.layout.setContentsMargins(25, 25, 25, 25)
-        self.layout.setSpacing(20)
+        outer = QVBoxLayout(self)
+        outer.setContentsMargins(36, 36, 36, 36)
+        outer.setSpacing(6)
 
-        # TITLE
-        self.title = QLabel("Monthly Financial Reports")
-        self.title.setFont(QFont("Segoe UI", 22, QFont.Bold))
-        self.layout.addWidget(self.title)
+        title = QLabel("Monthly Financial Reports")
+        title.setObjectName("PageTitle")
+        outer.addWidget(title)
 
-       
-        # SUMMARY CARDS
-        
-        self.cards_layout = QHBoxLayout()
+        subtitle = QLabel("Compare income, expenses, and savings across months.")
+        subtitle.setObjectName("Subtitle")
+        outer.addWidget(subtitle)
 
-        self.best_month_card = self.create_card("Best Month", "-", "#22c55e")
-        self.worst_month_card = self.create_card("Worst Month", "-", "#ef4444")
-        self.avg_card = self.create_card("Avg Monthly Savings", "-", "#3b82f6")
+        outer.addSpacing(16)
 
-        self.cards_layout.addWidget(self.best_month_card)
-        self.cards_layout.addWidget(self.worst_month_card)
-        self.cards_layout.addWidget(self.avg_card)
+        # ── SUMMARY CARDS ──
+        cards_row = QHBoxLayout()
+        cards_row.setSpacing(16)
 
-        self.layout.addLayout(self.cards_layout)
+        self.best_card,  self.best_val  = self._metric_card("Best Month",          "success")
+        self.worst_card, self.worst_val = self._metric_card("Worst Month",         "danger")
+        self.avg_card,   self.avg_val   = self._metric_card("Avg Monthly Savings", "primary")
 
-        
-        # CHARTS AREA
-   
-        self.charts_layout = QHBoxLayout()
+        cards_row.addWidget(self.best_card)
+        cards_row.addWidget(self.worst_card)
+        cards_row.addWidget(self.avg_card)
+        outer.addLayout(cards_row)
 
-        # LINE CHART (Income vs Expense)
+        outer.addSpacing(8)
+
+        # ── CHARTS ──
+        charts_row = QHBoxLayout()
+        charts_row.setSpacing(16)
+
+        c = self._colors()
+
+        # Income vs Expense
         self.line_frame = QFrame()
-        self.line_layout = QVBoxLayout(self.line_frame)
+        self.line_frame.setObjectName("ChartCard")
+        line_layout = QVBoxLayout(self.line_frame)
+        line_layout.setContentsMargins(20, 20, 20, 20)
+        line_layout.setSpacing(10)
 
-        self.line_title = QLabel("Income vs Expenses")
-        self.line_title.setFont(QFont("Segoe UI", 14, QFont.Bold))
+        line_title = QLabel("Income vs Expenses")
+        line_title.setObjectName("SectionTitle")
+        line_layout.addWidget(line_title)
 
-        self.line_fig = Figure(facecolor="#1e293b")
+        self.line_fig = Figure(facecolor=c["surface"])
         self.line_canvas = FigureCanvas(self.line_fig)
+        line_layout.addWidget(self.line_canvas)
 
-        self.line_layout.addWidget(self.line_title)
-        self.line_layout.addWidget(self.line_canvas)
-
-        # NET BALANCE CHART
+        # Net savings
         self.net_frame = QFrame()
-        self.net_layout = QVBoxLayout(self.net_frame)
+        self.net_frame.setObjectName("ChartCard")
+        net_layout = QVBoxLayout(self.net_frame)
+        net_layout.setContentsMargins(20, 20, 20, 20)
+        net_layout.setSpacing(10)
 
-        self.net_title = QLabel("Net Savings Trend")
-        self.net_title.setFont(QFont("Segoe UI", 14, QFont.Bold))
+        net_title = QLabel("Net Savings Trend")
+        net_title.setObjectName("SectionTitle")
+        net_layout.addWidget(net_title)
 
-        self.net_fig = Figure(facecolor="#1e293b")
+        self.net_fig = Figure(facecolor=c["surface"])
         self.net_canvas = FigureCanvas(self.net_fig)
+        net_layout.addWidget(self.net_canvas)
 
-        self.net_layout.addWidget(self.net_title)
-        self.net_layout.addWidget(self.net_canvas)
+        charts_row.addWidget(self.line_frame)
+        charts_row.addWidget(self.net_frame)
+        outer.addLayout(charts_row)
 
-        self.charts_layout.addWidget(self.line_frame)
-        self.charts_layout.addWidget(self.net_frame)
-
-        self.layout.addLayout(self.charts_layout)
-
-        # LOAD DATA
         self.load_data()
 
-        # STYLE
-        self.setStyleSheet("""
-            QWidget {
-                background-color: #0f172a;
-                color: white;
-                font-family: Segoe UI;
-            }
-
-            QFrame {
-                background-color: #1e293b;
-                border-radius: 18px;
-                padding: 10px;
-            }
-
-            QLabel {
-                color: white;
-            }
-        """)
-
-   
-    # CARD BUILDER
-    
-    def create_card(self, title, value, color):
-
+    def _metric_card(self, title, accent):
         card = QFrame()
+        card.setObjectName("Card")
         layout = QVBoxLayout(card)
+        layout.setContentsMargins(24, 22, 24, 22)
+        layout.setSpacing(8)
 
-        title_label = QLabel(title)
-        title_label.setFont(QFont("Segoe UI", 11))
+        t = QLabel(title.upper())
+        t.setObjectName("MetricTitle")
 
-        value_label = QLabel(value)
-        value_label.setFont(QFont("Segoe UI", 20, QFont.Bold))
-        value_label.setStyleSheet(f"color:{color};")
+        v = QLabel("—")
+        v.setObjectName("MetricValue")
+        v.setProperty("accent", accent)
 
-        layout.addWidget(title_label)
-        layout.addWidget(value_label)
+        layout.addWidget(t)
+        layout.addWidget(v)
+        return card, v
 
-        return card
-
-
-    # LOAD DATA
-    
     def load_data(self):
-
+        c = self._colors()
         data = database.get_monthly_summary()
 
-        months = []
-        income = []
-        expenses = []
-        net = []
+        months, income, expenses, net = [], [], [], []
 
         for row in data:
-
             month = row[0]
-            inc = row[1] / 100
-            exp = row[2] / 100
-
+            inc   = (row[1] or 0) / 100
+            exp   = (row[2] or 0) / 100
             months.append(month)
             income.append(inc)
             expenses.append(exp)
             net.append(inc - exp)
 
-      
-        # BEST / WORST MONTH
-        
         if net:
+            best_i  = net.index(max(net))
+            worst_i = net.index(min(net))
+            avg     = sum(net) / len(net)
 
-            best_index = net.index(max(net))
-            worst_index = net.index(min(net))
+            self.best_val.setText(f"{months[best_i]}  +GHS {net[best_i]:,.2f}")
+            self.worst_val.setText(f"{months[worst_i]}  GHS {net[worst_i]:,.2f}")
+            self.avg_val.setText(f"GHS {avg:,.2f}")
+        else:
+            self.best_val.setText("—")
+            self.worst_val.setText("—")
+            self.avg_val.setText("—")
 
-            self.update_card(self.best_month_card, "Best Month", f"{months[best_index]} (+GHS {net[best_index]:,.2f})", "#22c55e")
-            self.update_card(self.worst_month_card, "Worst Month", f"{months[worst_index]} (GHS {net[worst_index]:,.2f})", "#ef4444")
+        # Refresh accent colors
+        for v in [self.best_val, self.worst_val, self.avg_val]:
+            v.style().unpolish(v)
+            v.style().polish(v)
 
-            avg = sum(net) / len(net)
-            self.update_card(self.avg_card, "Avg Monthly Savings", f"GHS {avg:,.2f}", "#3b82f6")
-
-        
-        # LINE CHART (INCOME vs EXPENSE)
-        
+        # ── LINE CHART ──
         self.line_fig.clear()
         ax1 = self.line_fig.add_subplot(111)
+        ax1.set_facecolor(c["surface"])
+        self.line_fig.patch.set_facecolor(c["surface"])
 
-        ax1.plot(months, income, marker="o", label="Income")
-        ax1.plot(months, expenses, marker="o", label="Expenses")
-
-        ax1.set_title("Monthly Income vs Expenses", color="white")
-        ax1.tick_params(colors="white")
-        ax1.legend()
-        ax1.grid(True)
+        if months:
+            ax1.plot(months, income,   marker="o", linewidth=2.5,
+                     color=c["success"], label="Income")
+            ax1.plot(months, expenses, marker="o", linewidth=2.5,
+                     color=c["danger"],  label="Expenses")
+            ax1.set_title("Monthly Income vs Expenses", color=c["text"], fontsize=13, pad=10)
+            ax1.tick_params(colors=c["muted"])
+            ax1.grid(True, alpha=0.15, color=c["border"])
+            for spine in ax1.spines.values():
+                spine.set_edgecolor(c["border"])
+            legend = ax1.legend()
+            for text in legend.get_texts():
+                text.set_color(c["text"])
+            legend.get_frame().set_facecolor(c["surface"])
+            legend.get_frame().set_edgecolor(c["border"])
+        else:
+            ax1.text(0.5, 0.5, "No data available", ha="center", va="center",
+                     color=c["muted"], fontsize=13)
 
         self.line_canvas.draw()
 
-        
-        # NET CHART
-        
+        # ── NET CHART ──
         self.net_fig.clear()
         ax2 = self.net_fig.add_subplot(111)
+        ax2.set_facecolor(c["surface"])
+        self.net_fig.patch.set_facecolor(c["surface"])
 
-        ax2.plot(months, net, marker="o", color="green")
-
-        ax2.set_title("Net Savings Trend", color="white")
-        ax2.tick_params(colors="white")
-        ax2.axhline(0, color="red", linestyle="--")
+        if months:
+            ax2.plot(months, net, marker="o", linewidth=2.5, color=c["primary"])
+            ax2.axhline(0, color=c["danger"], linestyle="--", alpha=0.4, linewidth=1.5)
+            ax2.set_title("Net Savings Trend", color=c["text"], fontsize=13, pad=10)
+            ax2.tick_params(colors=c["muted"])
+            ax2.grid(True, alpha=0.15, color=c["border"])
+            for spine in ax2.spines.values():
+                spine.set_edgecolor(c["border"])
+        else:
+            ax2.text(0.5, 0.5, "No data available", ha="center", va="center",
+                     color=c["muted"], fontsize=13)
 
         self.net_canvas.draw()
 
-    
-    # UPDATE CARD TEXT
-    
-    def update_card(self, card, title, value, color):
+    def _colors(self):
+        theme = database.get_setting("theme", ThemeManager.DARK)
+        return theme_colors(theme)
 
-        layout = card.layout()
-
-        layout.itemAt(0).widget().setText(title)
-        value_label = layout.itemAt(1).widget()
-        value_label.setText(value)
-        value_label.setStyleSheet(f"color:{color};")
+    def refresh_theme(self):
+        self.load_data()

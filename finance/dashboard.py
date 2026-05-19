@@ -7,15 +7,16 @@ from PySide6.QtWidgets import (
     QTableWidget,
     QTableWidgetItem,
     QHeaderView,
-    QAbstractItemView
+    QAbstractItemView,
+    QSizePolicy
 )
 
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QColor, QFont
 
 import database
-
 from refresh import refresh_manager
+from table_utils import fit_table_height_to_rows
 
 
 class Dashboard(QWidget):
@@ -23,378 +24,129 @@ class Dashboard(QWidget):
     def __init__(self):
         super().__init__()
 
-    
-        # MAIN LAYOUT
-        
         self.main_layout = QVBoxLayout(self)
+        self.main_layout.setContentsMargins(36, 36, 36, 36)
+        self.main_layout.setSpacing(6)
 
-        self.main_layout.setContentsMargins(
-            25,
-            25,
-            25,
-            25
-        )
-
-        self.main_layout.setSpacing(25)
-
-    
         # TITLE
-    
-        self.title = QLabel(
-            "Finance Dashboard"
-        )
+        title = QLabel("Finance Dashboard")
+        title.setObjectName("PageTitle")
+        self.main_layout.addWidget(title)
 
-        self.title.setFont(
-            QFont(
-                "Segoe UI",
-                24,
-                QFont.Bold
-            )
-        )
+        subtitle = QLabel("A quick view of your balance, totals, and latest transaction activity.")
+        subtitle.setObjectName("Subtitle")
+        self.main_layout.addWidget(subtitle)
 
-        self.main_layout.addWidget(
-            self.title
-        )
+        self.main_layout.addSpacing(16)
 
+        # ── SUMMARY CARDS ──
+        cards_row = QHBoxLayout()
+        cards_row.setSpacing(16)
 
-        # SUMMARY CARDS LAYOUT
-        
-        self.cards_layout = QHBoxLayout()
+        self.balance_card, self.balance_value = self._create_card("Current Balance", "primary")
+        self.income_card,  self.income_value  = self._create_card("Total Income",    "success")
+        self.expense_card, self.expense_value = self._create_card("Total Expenses",  "danger")
 
-        self.cards_layout.setSpacing(20)
+        cards_row.addWidget(self.balance_card)
+        cards_row.addWidget(self.income_card)
+        cards_row.addWidget(self.expense_card)
+        self.main_layout.addLayout(cards_row)
 
-        self.main_layout.addLayout(
-            self.cards_layout
-        )
+        self.main_layout.addSpacing(8)
 
+        # ── RECENT TRANSACTIONS ──
+        recent_label = QLabel("Recent Transactions")
+        recent_label.setObjectName("SectionTitle")
+        self.main_layout.addWidget(recent_label)
 
-        # CREATE CARDS
-        
-        self.balance_card, self.balance_value = (
-            self.create_card(
-                "Current Balance",
-                "#3b82f6"
-            )
-        )
-
-        self.income_card, self.income_value = (
-            self.create_card(
-                "Total Income",
-                "#22c55e"
-            )
-        )
-
-        self.expense_card, self.expense_value = (
-            self.create_card(
-                "Total Expenses",
-                "#ef4444"
-            )
-        )
-
-        # ADD CARDS
-        self.cards_layout.addWidget(
-            self.balance_card
-        )
-
-        self.cards_layout.addWidget(
-            self.income_card
-        )
-
-        self.cards_layout.addWidget(
-            self.expense_card
-        )
-
-        
-        # RECENT TRANSACTIONS TITLE
-        self.recent_label = QLabel(
-            "Recent Transactions"
-        )
-
-        self.recent_label.setFont(
-            QFont(
-                "Segoe UI",
-                18,
-                QFont.Bold
-            )
-        )
-
-        self.main_layout.addWidget(
-            self.recent_label
-        )
-
+        self.main_layout.addSpacing(6)
 
         # TABLE CONTAINER
-        
         self.table_container = QFrame()
+        self.table_container.setObjectName("TableCard")
+        self.table_container.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Maximum)
 
-        self.table_container.setObjectName(
-            "tableContainer"
-        )
+        table_layout = QVBoxLayout(self.table_container)
+        table_layout.setContentsMargins(0, 0, 0, 0)
 
-        self.table_layout = QVBoxLayout(
-            self.table_container
-        )
-
-        self.table_layout.setContentsMargins(
-            15,
-            15,
-            15,
-            15
-        )
-
-    
         # TABLE
-    
         self.table = QTableWidget()
-
         self.table.setColumnCount(5)
-
         self.table.setHorizontalHeaderLabels([
-            "Date",
-            "Category",
-            "Description",
-            "Amount",
-            "Type"
+            "Date", "Category", "Description", "Amount", "Type"
         ])
 
-        self.table.horizontalHeader().setSectionResizeMode(
-            QHeaderView.Stretch
-        )
-
-        self.table.setSelectionBehavior(
-            QAbstractItemView.SelectRows
-        )
-
-        self.table.setEditTriggers(
-            QAbstractItemView.NoEditTriggers
-        )
-
-        self.table.verticalHeader().setVisible(
-            False
-        )
-
-        self.table.setAlternatingRowColors(
-            True
-        )
-
+        header = self.table.horizontalHeader()
+        header.setSectionResizeMode(QHeaderView.Interactive)
+        header.setSectionResizeMode(0, QHeaderView.ResizeToContents)
+        header.setSectionResizeMode(1, QHeaderView.ResizeToContents)
+        header.setSectionResizeMode(2, QHeaderView.Stretch)
+        header.setSectionResizeMode(3, QHeaderView.ResizeToContents)
+        header.setSectionResizeMode(4, QHeaderView.ResizeToContents)
+        self.table.setSelectionBehavior(QAbstractItemView.SelectRows)
+        self.table.setEditTriggers(QAbstractItemView.NoEditTriggers)
+        self.table.verticalHeader().setVisible(False)
+        self.table.setAlternatingRowColors(True)
         self.table.setShowGrid(False)
 
-        self.table.setMinimumHeight(300)
+        table_layout.addWidget(self.table)
+        self.main_layout.addWidget(self.table_container)
 
-        self.table_layout.addWidget(
-            self.table
-        )
-
-        self.main_layout.addWidget(
-            self.table_container
-        )
-
-        
-        # LOAD DATA
-        
         self.refresh_data()
+        refresh_manager.data_changed.connect(self.refresh_data)
 
-        
-        # AUTO REFRESH
-        
-        refresh_manager.data_changed.connect(
-            self.refresh_data
-        )
-
-        
-        # STYLES
-        
-        self.setStyleSheet("""
-            QWidget {
-                background-color: #0f172a;
-                color: white;
-                font-family: Segoe UI;
-            }
-
-            QLabel {
-                color: white;
-            }
-
-            QFrame {
-                background-color: #1e293b;
-                border-radius: 18px;
-            }
-
-            #tableContainer {
-                background-color: #1e293b;
-                border-radius: 18px;
-            }
-
-            QTableWidget {
-                background-color: #1e293b;
-                border: none;
-                border-radius: 12px;
-                font-size: 14px;
-            }
-
-            QHeaderView::section {
-                background-color: #334155;
-                color: white;
-                border: none;
-                padding: 12px;
-                font-size: 14px;
-                font-weight: bold;
-            }
-
-            QTableWidget::item {
-                padding: 10px;
-                border-bottom: 1px solid #334155;
-            }
-
-            QTableWidget::item:selected {
-                background-color: #2563eb;
-            }
-        """)
-    # CREATE CARD
-    
-    def create_card(
-        self,
-        title,
-        color
-    ):
-
+    def _create_card(self, title, accent):
         card = QFrame()
-
+        card.setObjectName("Card")
         layout = QVBoxLayout(card)
+        layout.setContentsMargins(24, 22, 24, 22)
+        layout.setSpacing(8)
 
-        layout.setContentsMargins(
-            20,
-            20,
-            20,
-            20
-        )
+        title_lbl = QLabel(title.upper())
+        title_lbl.setObjectName("MetricTitle")
 
-        layout.setSpacing(10)
+        value_lbl = QLabel("GHS 0.00")
+        value_lbl.setObjectName("MetricValue")
+        value_lbl.setProperty("accent", accent)
 
-        title_label = QLabel(title)
+        layout.addWidget(title_lbl)
+        layout.addWidget(value_lbl)
 
-        title_label.setFont(
-            QFont(
-                "Segoe UI",
-                12
-            )
-        )
+        return card, value_lbl
 
-        value_label = QLabel("GHS 0.00")
-
-        value_label.setFont(
-            QFont(
-                "Segoe UI",
-                22,
-                QFont.Bold
-            )
-        )
-
-        value_label.setStyleSheet(f"""
-            color: {color};
-        """)
-
-        layout.addWidget(title_label)
-
-        layout.addWidget(value_label)
-
-        return card, value_label
-
-    
-    # REFRESH DATA
-   
     def refresh_data(self):
-
-        # LOAD CARD DATA
-        balance = database.get_balance()
-
-        income = database.get_total_income()
-
+        balance  = database.get_balance()
+        income   = database.get_total_income()
         expenses = database.get_total_expenses()
 
-        self.balance_value.setText(
-            f"GHS {balance:,.2f}"
-        )
+        self.balance_value.setText(f"GHS {balance:,.2f}")
+        self.income_value.setText(f"GHS {income:,.2f}")
+        self.expense_value.setText(f"GHS {expenses:,.2f}")
 
-        self.income_value.setText(
-            f"GHS {income:,.2f}"
-        )
-
-        self.expense_value.setText(
-            f"GHS {expenses:,.2f}"
-        )
-
-        # LOAD TABLE
         self.load_recent_transactions()
 
-    
-    # LOAD RECENT TRANSACTIONS
-    
     def load_recent_transactions(self):
-
-        transactions = (
-            database.get_recent_transactions()
-        )
-
+        transactions = database.get_transactions()
         self.table.setRowCount(0)
 
-        for row_number, row_data in enumerate(
-            transactions
-        ):
-
+        for row_number, row_data in enumerate(transactions):
             self.table.insertRow(row_number)
 
-            date = row_data[1]
-
-            category = row_data[2]
-
+            date        = row_data[1]
+            category    = row_data[2]
             description = row_data[3]
+            amount      = row_data[4] / 100
+            trans_type  = row_data[5]
 
-            amount_cents = row_data[4]
+            values = [date, category, description, f"GHS {amount:,.2f}", trans_type]
 
-            trans_type = row_data[5]
+            for col, value in enumerate(values):
+                item = QTableWidgetItem(value)
+                item.setTextAlignment(Qt.AlignVCenter | Qt.AlignLeft)
+                if col in [3, 4]:
+                    item.setForeground(
+                        QColor("#22c55e") if trans_type == "Income" else QColor("#ef4444")
+                    )
+                self.table.setItem(row_number, col, item)
 
-            amount = amount_cents / 100
-
-            data = [
-                date,
-                category,
-                description,
-                f"GHS {amount:,.2f}",
-                trans_type
-            ]
-
-            for column_number, data_item in enumerate(
-                data
-            ):
-
-                item = QTableWidgetItem(
-                    data_item
-                )
-
-                item.setTextAlignment(
-                    Qt.AlignCenter
-                )
-
-                
-                # COLOR CODING
-               
-                if column_number in [3, 4]:
-
-                    if trans_type == "Income":
-
-                        item.setForeground(
-                            QColor("#22c55e")
-                        )
-
-                    else:
-
-                        item.setForeground(
-                            QColor("#ef4444")
-                        )
-
-                self.table.setItem(
-                    row_number,
-                    column_number,
-                    item
-                )
+        fit_table_height_to_rows(self.table, min_rows=0, max_rows=8)

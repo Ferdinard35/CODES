@@ -1,6 +1,7 @@
 from PySide6.QtWidgets import (
     QWidget,
     QVBoxLayout,
+    QHBoxLayout,
     QLabel,
     QLineEdit,
     QPushButton,
@@ -8,10 +9,11 @@ from PySide6.QtWidgets import (
     QComboBox,
     QDateEdit,
     QTextEdit,
-    QFrame
+    QFrame,
+    QSizePolicy
 )
 
-from PySide6.QtCore import Qt, QDate
+from PySide6.QtCore import QDate, Qt
 from PySide6.QtGui import QFont, QDoubleValidator
 
 import database
@@ -22,255 +24,181 @@ class AddTransactionPage(QWidget):
     def __init__(self):
         super().__init__()
 
+        self._transaction_type = "Income"
+
         # MAIN LAYOUT
-        
-        self.layout = QVBoxLayout(self)
+        outer = QVBoxLayout(self)
+        outer.setContentsMargins(36, 36, 36, 36)
+        outer.setSpacing(6)
 
-        self.layout.setContentsMargins(40, 30, 40, 30)
-        self.layout.setSpacing(18)
-
-      
         # TITLE
-       
-        self.title = QLabel("Add Transaction")
-        self.title.setFont(QFont("Segoe UI", 22, QFont.Bold))
-        self.title.setAlignment(Qt.AlignCenter)
+        title = QLabel("Add Transaction")
+        title.setObjectName("PageTitle")
+        outer.addWidget(title)
 
-        self.layout.addWidget(self.title)
+        subtitle = QLabel("Record income and expenses with a date, category, and description.")
+        subtitle.setObjectName("Subtitle")
+        outer.addWidget(subtitle)
 
-        # FORM CONTAINER
-        
-        self.form_container = QFrame()
-        self.form_container.setObjectName("formContainer")
+        outer.addSpacing(12)
 
-        self.form_layout = QVBoxLayout(self.form_container)
-        self.form_layout.setSpacing(15)
-        self.form_layout.setContentsMargins(25, 25, 25, 25)
+        # FORM CARD
+        self.form_card = QFrame()
+        self.form_card.setObjectName("FormCard")
+        self.form_card.setMaximumWidth(780)
 
-        
-        # DATE
-        
-        self.date_label = QLabel("Date")
-        self.date_label.setFont(QFont("Segoe UI", 10))
+        form = QVBoxLayout(self.form_card)
+        form.setContentsMargins(28, 28, 28, 28)
+        form.setSpacing(18)
 
+        # ── ROW 1: Date + Category ──
+        row1 = QHBoxLayout()
+        row1.setSpacing(16)
+
+        date_col = QVBoxLayout()
+        date_col.setSpacing(6)
+        date_col.addWidget(self._field_label("Date"))
         self.date_input = QDateEdit()
         self.date_input.setCalendarPopup(True)
         self.date_input.setDate(QDate.currentDate())
         self.date_input.setDisplayFormat("yyyy-MM-dd")
         self.date_input.setMinimumHeight(42)
+        date_col.addWidget(self.date_input)
 
-        self.form_layout.addWidget(self.date_label)
-        self.form_layout.addWidget(self.date_input)
-
-        
-        # CATEGORY
-        
-        self.category_label = QLabel("Category")
-        self.category_label.setFont(QFont("Segoe UI", 10))
-
+        cat_col = QVBoxLayout()
+        cat_col.setSpacing(6)
+        cat_col.addWidget(self._field_label("Category"))
         self.category_input = QComboBox()
-        self.category_input.setMinimumHeight(42)
-
         self.category_input.addItems([
-            "Food",
-            "Transport",
-            "Shopping",
-            "Bills",
-            "Entertainment",
-            "Salary",
-            "Investment",
-            "Health",
-            "Education",
-            "Other"
+            "Food", "Transport", "Shopping", "Bills",
+            "Entertainment", "Salary", "Investment",
+            "Health", "Education", "Other"
         ])
+        self.category_input.setMinimumHeight(42)
+        cat_col.addWidget(self.category_input)
 
-        self.form_layout.addWidget(self.category_label)
-        self.form_layout.addWidget(self.category_input)
+        row1.addLayout(date_col)
+        row1.addLayout(cat_col)
+        form.addLayout(row1)
 
-        
-        # DESCRIPTION
-        
-        self.description_label = QLabel("Description")
-        self.description_label.setFont(QFont("Segoe UI", 10))
-
+        # ── DESCRIPTION ──
+        desc_col = QVBoxLayout()
+        desc_col.setSpacing(6)
+        desc_col.addWidget(self._field_label("Description"))
         self.description_input = QTextEdit()
-        self.description_input.setPlaceholderText(
-            "Enter transaction description..."
-        )
-        self.description_input.setFixedHeight(90)
+        self.description_input.setPlaceholderText("Enter transaction description...")
+        self.description_input.setFixedHeight(80)
+        desc_col.addWidget(self.description_input)
+        form.addLayout(desc_col)
 
-        self.form_layout.addWidget(self.description_label)
-        self.form_layout.addWidget(self.description_input)
+        # ── ROW 2: Amount + Type ──
+        row2 = QHBoxLayout()
+        row2.setSpacing(16)
 
-        
-        # AMOUNT
-        
-        self.amount_label = QLabel("Amount (GHS)")
-        self.amount_label.setFont(QFont("Segoe UI", 10))
-
+        amt_col = QVBoxLayout()
+        amt_col.setSpacing(6)
+        amt_col.addWidget(self._field_label("Amount (GHS)"))
         self.amount_input = QLineEdit()
         self.amount_input.setPlaceholderText("0.00")
         self.amount_input.setMinimumHeight(42)
-
-        validator = QDoubleValidator(0.00, 9999999.99, 2)
+        validator = QDoubleValidator(0.00, 999999999.99, 2)
         validator.setNotation(QDoubleValidator.StandardNotation)
-
         self.amount_input.setValidator(validator)
+        amt_col.addWidget(self.amount_input)
 
-        self.form_layout.addWidget(self.amount_label)
-        self.form_layout.addWidget(self.amount_input)
+        type_col = QVBoxLayout()
+        type_col.setSpacing(6)
+        type_col.addWidget(self._field_label("Transaction Type"))
 
-        
-        # TRANSACTION TYPE
-       
-        self.type_label = QLabel("Transaction Type")
-        self.type_label.setFont(QFont("Segoe UI", 10))
+        # Toggle buttons
+        toggle_frame = QFrame()
+        toggle_frame.setObjectName("FormCard")
+        toggle_frame.setStyleSheet(
+            "QFrame#FormCard { border-radius: 8px; padding: 3px; }"
+        )
+        toggle_layout = QHBoxLayout(toggle_frame)
+        toggle_layout.setContentsMargins(4, 4, 4, 4)
+        toggle_layout.setSpacing(4)
 
-        self.type_input = QComboBox()
-        self.type_input.setMinimumHeight(42)
+        self.income_btn = QPushButton("Income")
+        self.income_btn.setObjectName("ToggleIncomeActive")
+        self.income_btn.setMinimumHeight(34)
+        self.income_btn.setCursor(Qt.PointingHandCursor)
+        self.income_btn.clicked.connect(lambda: self._set_type("Income"))
 
-        self.type_input.addItems([
-            "Income",
-            "Expense"
-        ])
+        self.expense_btn = QPushButton("Expense")
+        self.expense_btn.setObjectName("ToggleInactive")
+        self.expense_btn.setMinimumHeight(34)
+        self.expense_btn.setCursor(Qt.PointingHandCursor)
+        self.expense_btn.clicked.connect(lambda: self._set_type("Expense"))
 
-        self.form_layout.addWidget(self.type_label)
-        self.form_layout.addWidget(self.type_input)
+        toggle_layout.addWidget(self.income_btn)
+        toggle_layout.addWidget(self.expense_btn)
 
-        
-        # ADD BUTTON
-        
+        type_col.addWidget(toggle_frame)
+
+        row2.addLayout(amt_col)
+        row2.addLayout(type_col)
+        form.addLayout(row2)
+
+        # ── SUBMIT ──
         self.add_button = QPushButton("Add Transaction")
-        self.add_button.setMinimumHeight(50)
-
+        self.add_button.setMinimumHeight(46)
+        self.add_button.setCursor(Qt.PointingHandCursor)
         self.add_button.clicked.connect(self.add_transaction)
+        form.addWidget(self.add_button)
 
-        self.form_layout.addWidget(self.add_button)
+        card_row = QHBoxLayout()
+        card_row.addWidget(self.form_card)
+        card_row.addStretch()
+        outer.addLayout(card_row)
+        outer.addStretch()
 
-        
-        # ADD FORM TO MAIN LAYOUT
+    def _field_label(self, text):
+        lbl = QLabel(text)
+        lbl.setObjectName("FieldLabel")
+        return lbl
 
-        self.layout.addWidget(self.form_container)
+    def _set_type(self, t):
+        self._transaction_type = t
+        if t == "Income":
+            self.income_btn.setObjectName("ToggleIncomeActive")
+            self.expense_btn.setObjectName("ToggleInactive")
+        else:
+            self.income_btn.setObjectName("ToggleInactive")
+            self.expense_btn.setObjectName("ToggleExpenseActive")
+        for btn in [self.income_btn, self.expense_btn]:
+            btn.style().unpolish(btn)
+            btn.style().polish(btn)
 
-        
-        # STYLES
-        
-        self.setStyleSheet("""
-            QWidget {
-                background-color: #0f172a;
-                color: white;
-                font-family: Segoe UI;
-            }
-
-            #formContainer {
-                background-color: #1e293b;
-                border-radius: 18px;
-            }
-
-            QLabel {
-                color: #e2e8f0;
-            }
-
-            QLineEdit,
-            QTextEdit,
-            QComboBox,
-            QDateEdit {
-                background-color: #334155;
-                border: 2px solid transparent;
-                border-radius: 10px;
-                padding: 10px;
-                font-size: 14px;
-                color: white;
-            }
-
-            QLineEdit:focus,
-            QTextEdit:focus,
-            QComboBox:focus,
-            QDateEdit:focus {
-                border: 2px solid #3b82f6;
-            }
-
-            QPushButton {
-                background-color: #2563eb;
-                border: none;
-                border-radius: 12px;
-                color: white;
-                font-size: 15px;
-                font-weight: bold;
-            }
-
-            QPushButton:hover {
-                background-color: #3b82f6;
-            }
-
-            QPushButton:pressed {
-                background-color: #1d4ed8;
-            }
-        """)
-
-    
-    # ADD TRANSACTION FUNCTION
-
+    # ── ADD TRANSACTION ──
     def add_transaction(self):
-
         date = self.date_input.date().toString("yyyy-MM-dd")
-
         category = self.category_input.currentText()
-
         description = self.description_input.toPlainText().strip()
+        amount_text = self.amount_input.text().strip()
+        trans_type = self._transaction_type
 
-        amount = self.amount_input.text().strip()
-
-        trans_type = self.type_input.currentText()
-
-        # VALIDATION
-        if not amount:
-            QMessageBox.warning(
-                self,
-                "Missing Amount",
-                "Please enter an amount."
-            )
+        if not amount_text:
+            QMessageBox.warning(self, "Error", "Please enter an amount.")
             return
-
+        if not description:
+            QMessageBox.warning(self, "Error", "Please enter a description.")
+            return
         try:
-            amount = float(amount)
-
+            amount = float(amount_text)
             if amount <= 0:
-                QMessageBox.warning(
-                    self,
-                    "Invalid Amount",
-                    "Amount must be greater than 0."
-                )
+                QMessageBox.warning(self, "Error", "Amount must be greater than 0.")
                 return
-
         except ValueError:
-            QMessageBox.warning(
-                self,
-                "Invalid Input",
-                "Please enter a valid amount."
-            )
+            QMessageBox.warning(self, "Error", "Invalid amount entered.")
             return
 
-        # SAVE TO DATABASE
-        database.add_transaction(
-            date,
-            category,
-            description,
-            amount,
-            trans_type
-        )
+        database.add_transaction(date, category, description, amount, trans_type)
+        QMessageBox.information(self, "Success", "Transaction added successfully!")
 
-        QMessageBox.information(
-            self,
-            "Success",
-            "Transaction added successfully!"
-        )
-
-        # CLEAR FIELDS
         self.description_input.clear()
         self.amount_input.clear()
-
         self.category_input.setCurrentIndex(0)
-        self.type_input.setCurrentIndex(0)
-
+        self._set_type("Income")
         self.date_input.setDate(QDate.currentDate())

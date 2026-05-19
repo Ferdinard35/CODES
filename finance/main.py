@@ -9,7 +9,9 @@ from PySide6.QtWidgets import (
     QPushButton,
     QStackedWidget,
     QFrame,
-    QLabel
+    QLabel,
+    QSpacerItem,
+    QSizePolicy
 )
 
 from PySide6.QtGui import QFont
@@ -20,29 +22,31 @@ from add_transaction import AddTransactionPage
 from history_page import HistoryPage
 from analytics_page import AnalyticsPage
 from monthly_report_page import MonthlyReportPage
-from theme_manager import ThemeManager
 from settings_page import SettingsPage
 from budget_page import BudgetPage
+from login_page import LoginPage
 
 import database
+from theme_manager import ThemeManager
 
 
 class MainWindow(QMainWindow):
 
-    def __init__(self):
+    def __init__(self, logout_callback=None):
         super().__init__()
 
-        
-        # WINDOW SETTINGS
-        
+        if not database.is_authenticated():
+            raise PermissionError("Authentication required")
+
+        self.logout_callback = logout_callback
+        self.current_user = database.get_logged_in_user()
+
         self.setWindowTitle("Smart Finance Tracker")
-        self.setMinimumSize(1200, 700)
+        self.setMinimumSize(1200, 720)
 
         database.create_table()
 
-        
         # CENTRAL WIDGET
-        
         self.central_widget = QWidget()
         self.setCentralWidget(self.central_widget)
 
@@ -50,158 +54,131 @@ class MainWindow(QMainWindow):
         self.main_layout.setContentsMargins(0, 0, 0, 0)
         self.main_layout.setSpacing(0)
 
-        
-        # SIDEBAR
-        
+        # ── SIDEBAR ──
         self.sidebar = QFrame()
-        self.sidebar.setObjectName("sidebar")
-        self.sidebar.setFixedWidth(240)
+        self.sidebar.setObjectName("Sidebar")
+        self.sidebar.setFixedWidth(220)
 
         self.sidebar_layout = QVBoxLayout(self.sidebar)
-        self.sidebar_layout.setContentsMargins(15, 20, 15, 20)
-        self.sidebar_layout.setSpacing(12)
+        self.sidebar_layout.setContentsMargins(14, 24, 14, 20)
+        self.sidebar_layout.setSpacing(2)
 
-        # TITLE
-        self.logo = QLabel("💰 Smart Finance")
-        self.logo.setFont(QFont("Segoe UI", 18, QFont.Bold))
-        self.logo.setAlignment(Qt.AlignCenter)
-        self.sidebar_layout.addWidget(self.logo)
+        # Brand
+        brand_row = QHBoxLayout()
+        brand_row.setContentsMargins(8, 0, 8, 0)
+        brand_icon = QLabel("◈")
+        brand_icon.setStyleSheet("color: #3b82f6; font-size: 18px; background: transparent;")
+        brand_name = QLabel("Smart Finance")
+        brand_name.setObjectName("SidebarBrand")
+        brand_row.addWidget(brand_icon)
+        brand_row.addWidget(brand_name)
+        brand_row.addStretch()
+        self.sidebar_layout.addLayout(brand_row)
 
-        
-        # BUTTONS
-        
-        self.dashboard_btn = self.create_sidebar_button("Dashboard")
-        self.add_btn = self.create_sidebar_button("Add Transaction")
-        self.history_btn = self.create_sidebar_button("History")
-        self.analytics_btn = self.create_sidebar_button("Analytics")
-        self.monthly_report_btn = self.create_sidebar_button("Monthly Report")
-        self.settings_btn = self.create_sidebar_button("Settings")
-        self.budget_btn = self.create_sidebar_button("Budget")
+        # Divider
+        divider = QFrame()
+        divider.setObjectName("SidebarDivider")
+        divider.setFixedHeight(1)
+        self.sidebar_layout.addSpacing(16)
+        self.sidebar_layout.addWidget(divider)
+        self.sidebar_layout.addSpacing(12)
 
-        self.sidebar_layout.addWidget(self.dashboard_btn)
-        self.sidebar_layout.addWidget(self.add_btn)
-        self.sidebar_layout.addWidget(self.history_btn)
-        self.sidebar_layout.addWidget(self.analytics_btn)
-        self.sidebar_layout.addWidget(self.monthly_report_btn)
-        self.sidebar_layout.addWidget(self.settings_btn)
-        self.sidebar_layout.addWidget(self.budget_btn)
+        # STACKED PAGES
+        self.stack = QStackedWidget()
+
+        # (label, icon_char, page)
+        self.pages = [
+            ("Dashboard",       "⊞", Dashboard()),
+            ("Add Transaction", "+", AddTransactionPage()),
+            ("History",         "◷", HistoryPage()),
+            ("Analytics",       "⋮", AnalyticsPage()),
+            ("Monthly Report",  "≡", MonthlyReportPage()),
+            ("Settings",        "⚙", SettingsPage(self, self.logout)),
+            ("Budget",          "◎", BudgetPage()),
+        ]
+
+        self.buttons = []
+
+        for index, (name, icon, page) in enumerate(self.pages):
+            btn = self.create_sidebar_button(name, icon)
+            btn.clicked.connect(lambda checked, i=index: self.switch_page(i))
+            self.sidebar_layout.addWidget(btn)
+            self.stack.addWidget(page)
+            self.buttons.append(btn)
 
         self.sidebar_layout.addStretch()
 
-        
-        # STACKED PAGES
-        
-        self.stack = QStackedWidget()
+        # Logged-in user label at bottom
+        user = database.get_logged_in_user()
+        username = user["username"] if user else ""
+        self.user_label = QLabel(f"● {username}")
+        self.user_label.setStyleSheet(
+            "color: #64748b; font-size: 12px; background: transparent; padding: 6px 10px;"
+        )
+        self.sidebar_layout.addWidget(self.user_label)
 
-        self.dashboard_page = Dashboard()
-        self.add_transaction_page = AddTransactionPage()
-        self.history_page = HistoryPage()
-        self.analytics_page = AnalyticsPage()
-        self.monthly_report_page = MonthlyReportPage()
-        self.settings_page = SettingsPage(self)
-        self.budget_page = BudgetPage()
-
-        self.stack.addWidget(self.dashboard_page)         # 0
-        self.stack.addWidget(self.add_transaction_page)    # 1
-        self.stack.addWidget(self.history_page)            # 2
-        self.stack.addWidget(self.analytics_page)          # 3
-        self.stack.addWidget(self.monthly_report_page)     # 4
-        self.stack.addWidget(self.settings_page)           # 5
-        self.stack.addWidget(self.budget_page)            # 6
-
-        
-        # ADD TO MAIN LAYOUT
-        
         self.main_layout.addWidget(self.sidebar)
         self.main_layout.addWidget(self.stack)
 
-        
-        # BUTTON CONNECTIONS
-    
-        self.dashboard_btn.clicked.connect(lambda: self.switch_page(0))
-        self.add_btn.clicked.connect(lambda: self.switch_page(1))
-        self.history_btn.clicked.connect(lambda: self.switch_page(2))
-        self.analytics_btn.clicked.connect(lambda: self.switch_page(3))
-        self.monthly_report_btn.clicked.connect(lambda: self.switch_page(4))
-        self.settings_btn.clicked.connect(lambda: self.switch_page(5))
-        self.budget_btn.clicked.connect(lambda: self.switch_page(6))
-    
-        # DEFAULT PAGE
-        
         self.switch_page(0)
 
-        
-        # STYLES
-        
-        self.setStyleSheet("""
-            QMainWindow {
-                background-color: #0f172a;
-            }
-
-            QWidget {
-                color: white;
-                font-family: Segoe UI;
-            }
-
-            #sidebar {
-                background-color: #1e293b;
-                border-right: 1px solid #334155;
-            }
-
-            QPushButton {
-                background-color: #334155;
-                color: white;
-                border: none;
-                border-radius: 12px;
-                padding: 12px;
-                text-align: left;
-                font-size: 14px;
-                font-weight: 600;
-            }
-
-            QPushButton:hover {
-                background-color: #475569;
-            }
-
-            QPushButton:pressed {
-                background-color: #2563eb;
-            }
-
-            QLabel {
-                color: white;
-            }
-        """)
-
-    
-    # CREATE BUTTON
-    
-    def create_sidebar_button(self, text):
-
-        button = QPushButton(text)
+    def create_sidebar_button(self, text, icon=""):
+        label = f"  {icon}  {text}" if icon else text
+        button = QPushButton(label)
+        button.setObjectName("SidebarButton")
         button.setCursor(Qt.PointingHandCursor)
-        button.setMinimumHeight(48)
+        button.setMinimumHeight(42)
         return button
 
-    
-    # SWITCH PAGES
-    
     def switch_page(self, index):
         self.stack.setCurrentIndex(index)
+        for i, btn in enumerate(self.buttons):
+            btn.setProperty("active", i == index)
+            btn.style().unpolish(btn)
+            btn.style().polish(btn)
 
+    def refresh_theme_views(self):
+        for _, _, page in self.pages:
+            if hasattr(page, "refresh_theme"):
+                page.refresh_theme()
 
+    def logout(self):
+        database.logout_user()
+        self.close()
+        if self.logout_callback:
+            self.logout_callback()
 
-# RUN APP
 
 if __name__ == "__main__":
-
     app = QApplication(sys.argv)
+    saved_theme = database.get_setting("theme", ThemeManager.DARK)
+    ThemeManager.apply_theme(app, saved_theme, save=False)
 
-    window = MainWindow()
+    window = None
+    login = None
 
-    # APPLY SAVED THEME
-    theme = database.get_setting("theme", "dark")
-    ThemeManager.apply_theme(app, theme)
+    def start_main():
+        global window, login
+        if not database.is_authenticated():
+            show_login()
+            return
+        if login:
+            login.close()
+            login = None
+        window = MainWindow(show_login)
+        window.show()
 
-    window.show()
+    def show_login():
+        global login, window
+        if window:
+            window.close()
+            window = None
+        login = LoginPage(start_main)
+        login.show()
+
+    if database.is_authenticated():
+        start_main()
+    else:
+        show_login()
 
     sys.exit(app.exec())
