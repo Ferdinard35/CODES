@@ -1,22 +1,12 @@
 from PySide6.QtWidgets import (
-    QWidget,
-    QVBoxLayout,
-    QHBoxLayout,
-    QLabel,
-    QFrame,
-    QTableWidget,
-    QTableWidgetItem,
-    QHeaderView,
-    QAbstractItemView,
-    QSizePolicy
+    QWidget, QVBoxLayout, QHBoxLayout, QLabel, QFrame,
+    QTableWidget, QTableWidgetItem, QHeaderView,
+    QAbstractItemView, QSizePolicy, QScrollArea
 )
-
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QColor, QFont
-
 import database
 from refresh import refresh_manager
-from table_utils import fit_table_height_to_rows
 
 
 class Dashboard(QWidget):
@@ -24,20 +14,34 @@ class Dashboard(QWidget):
     def __init__(self):
         super().__init__()
 
-        self.main_layout = QVBoxLayout(self)
+        # Outer scroll area so nothing gets clipped
+        outer_layout = QVBoxLayout(self)
+        outer_layout.setContentsMargins(0, 0, 0, 0)
+        outer_layout.setSpacing(0)
+
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setFrameShape(QFrame.NoFrame)
+        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+
+        container = QWidget()
+        self.main_layout = QVBoxLayout(container)
         self.main_layout.setContentsMargins(36, 36, 36, 36)
-        self.main_layout.setSpacing(6)
+        self.main_layout.setSpacing(0)
+
+        scroll.setWidget(container)
+        outer_layout.addWidget(scroll)
 
         # TITLE
         title = QLabel("Finance Dashboard")
         title.setObjectName("PageTitle")
         self.main_layout.addWidget(title)
+        self.main_layout.addSpacing(4)
 
         subtitle = QLabel("A quick view of your balance, totals, and latest transaction activity.")
         subtitle.setObjectName("Subtitle")
         self.main_layout.addWidget(subtitle)
-
-        self.main_layout.addSpacing(16)
+        self.main_layout.addSpacing(20)
 
         # ── SUMMARY CARDS ──
         cards_row = QHBoxLayout()
@@ -51,46 +55,40 @@ class Dashboard(QWidget):
         cards_row.addWidget(self.income_card)
         cards_row.addWidget(self.expense_card)
         self.main_layout.addLayout(cards_row)
-
-        self.main_layout.addSpacing(8)
+        self.main_layout.addSpacing(24)
 
         # ── RECENT TRANSACTIONS ──
         recent_label = QLabel("Recent Transactions")
         recent_label.setObjectName("SectionTitle")
         self.main_layout.addWidget(recent_label)
+        self.main_layout.addSpacing(10)
 
-        self.main_layout.addSpacing(6)
-
-        # TABLE CONTAINER
-        self.table_container = QFrame()
-        self.table_container.setObjectName("TableCard")
-        self.table_container.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Maximum)
-
-        table_layout = QVBoxLayout(self.table_container)
-        table_layout.setContentsMargins(0, 0, 0, 0)
-
-        # TABLE
+        # TABLE — no wrapper frame, table IS the card visually
         self.table = QTableWidget()
+        self.table.setObjectName("DashTable")
         self.table.setColumnCount(5)
         self.table.setHorizontalHeaderLabels([
             "Date", "Category", "Description", "Amount", "Type"
         ])
+        self.table.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum)
 
         header = self.table.horizontalHeader()
-        header.setSectionResizeMode(QHeaderView.Interactive)
         header.setSectionResizeMode(0, QHeaderView.ResizeToContents)
         header.setSectionResizeMode(1, QHeaderView.ResizeToContents)
         header.setSectionResizeMode(2, QHeaderView.Stretch)
         header.setSectionResizeMode(3, QHeaderView.ResizeToContents)
         header.setSectionResizeMode(4, QHeaderView.ResizeToContents)
+
         self.table.setSelectionBehavior(QAbstractItemView.SelectRows)
         self.table.setEditTriggers(QAbstractItemView.NoEditTriggers)
         self.table.verticalHeader().setVisible(False)
         self.table.setAlternatingRowColors(True)
         self.table.setShowGrid(False)
+        self.table.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.table.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
 
-        table_layout.addWidget(self.table)
-        self.main_layout.addWidget(self.table_container)
+        self.main_layout.addWidget(self.table)
+        self.main_layout.addStretch()
 
         self.refresh_data()
         refresh_manager.data_changed.connect(self.refresh_data)
@@ -99,7 +97,7 @@ class Dashboard(QWidget):
         card = QFrame()
         card.setObjectName("Card")
         layout = QVBoxLayout(card)
-        layout.setContentsMargins(24, 22, 24, 22)
+        layout.setContentsMargins(24, 20, 24, 20)
         layout.setSpacing(8)
 
         title_lbl = QLabel(title.upper())
@@ -111,18 +109,12 @@ class Dashboard(QWidget):
 
         layout.addWidget(title_lbl)
         layout.addWidget(value_lbl)
-
         return card, value_lbl
 
     def refresh_data(self):
-        balance  = database.get_balance()
-        income   = database.get_total_income()
-        expenses = database.get_total_expenses()
-
-        self.balance_value.setText(f"GHS {balance:,.2f}")
-        self.income_value.setText(f"GHS {income:,.2f}")
-        self.expense_value.setText(f"GHS {expenses:,.2f}")
-
+        self.balance_value.setText(f"GHS {database.get_balance():,.2f}")
+        self.income_value.setText(f"GHS {database.get_total_income():,.2f}")
+        self.expense_value.setText(f"GHS {database.get_total_expenses():,.2f}")
         self.load_recent_transactions()
 
     def load_recent_transactions(self):
@@ -149,4 +141,9 @@ class Dashboard(QWidget):
                     )
                 self.table.setItem(row_number, col, item)
 
-        fit_table_height_to_rows(self.table, min_rows=0, max_rows=8)
+        # Fit table height exactly to rows — no overflow, no gap
+        self.table.resizeRowsToContents()
+        total_h = self.table.horizontalHeader().height() + 2
+        for i in range(self.table.rowCount()):
+            total_h += self.table.rowHeight(i)
+        self.table.setFixedHeight(total_h)

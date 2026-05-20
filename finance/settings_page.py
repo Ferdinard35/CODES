@@ -1,19 +1,8 @@
 from PySide6.QtWidgets import (
-    QWidget,
-    QVBoxLayout,
-    QHBoxLayout,
-    QLabel,
-    QPushButton,
-    QFrame,
-    QComboBox,
-    QMessageBox,
-    QSizePolicy,
-    QScrollArea
+    QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
+    QFrame, QComboBox, QMessageBox, QSizePolicy, QScrollArea
 )
-
-from PySide6.QtGui import QFont
 from PySide6.QtCore import Qt
-
 from theme_manager import ThemeManager
 from export_utils import export_transactions_to_csv
 from refresh import refresh_manager
@@ -24,60 +13,74 @@ class SettingsPage(QWidget):
 
     def __init__(self, app, logout_callback=None):
         super().__init__()
-
         self.app = app
         self.logout_callback = logout_callback
 
-        outer = QVBoxLayout(self)
-        outer.setContentsMargins(36, 36, 36, 36)
-        outer.setSpacing(6)
+        outer_layout = QVBoxLayout(self)
+        outer_layout.setContentsMargins(0, 0, 0, 0)
+
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setFrameShape(QFrame.NoFrame)
+        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+
+        container = QWidget()
+        main = QVBoxLayout(container)
+        main.setContentsMargins(36, 36, 36, 36)
+        main.setSpacing(16)
+
+        scroll.setWidget(container)
+        outer_layout.addWidget(scroll)
 
         # TITLE
         title = QLabel("Settings")
         title.setObjectName("PageTitle")
-        outer.addWidget(title)
+        main.addWidget(title)
 
         subtitle = QLabel("Manage appearance, data export, and application preferences.")
         subtitle.setObjectName("Subtitle")
-        outer.addWidget(subtitle)
+        main.addWidget(subtitle)
 
-        outer.addSpacing(16)
+        main.addSpacing(4)
 
-        # PREFERENCES CARD 
-        pref_card = self._section_card("Preferences")
+        # ── PREFERENCES ──
+        pref_card = self._make_card("Preferences")
+        pref_inner = pref_card.layout()
 
         self.theme_combo = QComboBox()
         self.theme_combo.addItems(["Dark", "Light"])
-        self.theme_combo.setMinimumHeight(38)
-        self.theme_combo.setFixedWidth(160)
+        self.theme_combo.setMinimumHeight(40)
+        self.theme_combo.setFixedWidth(180)
         self.theme_combo.currentTextChanged.connect(self.change_theme)
 
         self.currency_combo = QComboBox()
         self.currency_combo.addItems(["GHS", "USD", "EUR", "GBP"])
-        self.currency_combo.setMinimumHeight(38)
-        self.currency_combo.setFixedWidth(160)
+        self.currency_combo.setMinimumHeight(40)
+        self.currency_combo.setFixedWidth(180)
         self.currency_combo.currentTextChanged.connect(self.change_currency)
 
-        self._add_row(pref_card, "Application Theme",
-                      "Choose how the interface looks.", self.theme_combo)
-        self._add_row(pref_card, "Currency Label",
-                      "Used for display and export preferences.", self.currency_combo)
+        pref_inner.addWidget(self._row(
+            "Application Theme", "Choose how the interface looks.", self.theme_combo
+        ))
+        pref_inner.addWidget(self._row(
+            "Currency Label", "Used for display and export preferences.", self.currency_combo
+        ))
+        main.addWidget(pref_card)
 
-        outer.addWidget(pref_card)
-
-        # DATA MANAGEMENT CARD 
-        data_card = self._section_card("Data Management")
+        # ── DATA MANAGEMENT ──
+        data_card = self._make_card("Data Management")
+        data_inner = data_card.layout()
 
         self.export_btn = QPushButton("Export Transactions")
         self.export_btn.setObjectName("SecondaryButton")
-        self.export_btn.setMinimumHeight(38)
-        self.export_btn.setFixedWidth(190)
+        self.export_btn.setMinimumHeight(40)
+        self.export_btn.setFixedWidth(200)
         self.export_btn.setCursor(Qt.PointingHandCursor)
         self.export_btn.clicked.connect(self.export_data)
 
         self.clear_btn = QPushButton("Clear All")
         self.clear_btn.setObjectName("DangerButton")
-        self.clear_btn.setMinimumHeight(38)
+        self.clear_btn.setMinimumHeight(40)
         self.clear_btn.setFixedWidth(120)
         self.clear_btn.setCursor(Qt.PointingHandCursor)
         self.clear_btn.clicked.connect(self.clear_data)
@@ -85,35 +88,43 @@ class SettingsPage(QWidget):
         self.transaction_count = QLabel("")
         self.transaction_count.setObjectName("Subtitle")
 
-        self._add_row(data_card, "CSV Backup",
-                      "Download a copy of your transaction history.", self.export_btn)
-        self._add_row(data_card, "Transaction Records",
-                      "Remove all transaction rows after confirmation.", self.clear_btn)
-        data_card.layout().addWidget(self.transaction_count)
+        data_inner.addWidget(self._row(
+            "CSV Backup", "Download a copy of your transaction history.", self.export_btn
+        ))
+        data_inner.addWidget(self._row(
+            "Transaction Records", "Remove all transaction rows after confirmation.", self.clear_btn
+        ))
+        # Count row
+        count_row = QHBoxLayout()
+        count_row.setContentsMargins(0, 4, 0, 0)
+        count_row.addWidget(self.transaction_count)
+        count_row.addStretch()
+        data_inner.addLayout(count_row)
 
-        outer.addWidget(data_card)
+        main.addWidget(data_card)
 
-        # ACCOUNT CARD
-        account_card = self._section_card("Account")
+        # ── ACCOUNT ──
+        account_card = self._make_card("Account")
+        account_inner = account_card.layout()
 
         self.user_label = QLabel("")
         self.user_label.setObjectName("Subtitle")
 
         self.logout_btn = QPushButton("Logout")
         self.logout_btn.setObjectName("DangerButton")
-        self.logout_btn.setMinimumHeight(38)
-        self.logout_btn.setFixedWidth(110)
+        self.logout_btn.setMinimumHeight(40)
+        self.logout_btn.setFixedWidth(120)
         self.logout_btn.setCursor(Qt.PointingHandCursor)
         self.logout_btn.clicked.connect(self.logout)
 
-        self._add_row(account_card, "Logged in as",
-                      "Manage your session.", self.logout_btn,
-                      left_value_widget=self.user_label)
+        account_inner.addWidget(self._row(
+            "Logged in as", "Manage your session.",
+            self.logout_btn, value_widget=self.user_label
+        ))
+        main.addWidget(account_card)
 
-        outer.addWidget(account_card)
-
-        #  APP INFO CARD 
-        info_card = self._section_card("Application")
+        # ── APP INFO ──
+        info_card = self._make_card("Application")
         info = QLabel(
             f"Smart Finance Tracker  ·  Version 1.0\n"
             f"Database: {database.DB_NAME}"
@@ -121,70 +132,67 @@ class SettingsPage(QWidget):
         info.setObjectName("Subtitle")
         info.setWordWrap(True)
         info_card.layout().addWidget(info)
+        main.addWidget(info_card)
 
-        outer.addWidget(info_card)
-        outer.addStretch()
+        main.addStretch()
 
         self.load_settings()
         self.refresh_user()
         self.refresh_counts()
         refresh_manager.data_changed.connect(self.refresh_counts)
 
-    # HELPERS 
-    def _section_card(self, title):
+    # ── CARD FACTORY ──
+    def _make_card(self, title_text):
         card = QFrame()
         card.setObjectName("SettingsCard")
         layout = QVBoxLayout(card)
-        layout.setContentsMargins(28, 24, 28, 24)
+        layout.setContentsMargins(28, 22, 28, 22)
         layout.setSpacing(0)
 
-        title_lbl = QLabel(title)
-        title_lbl.setObjectName("SectionTitle")
-        layout.addWidget(title_lbl)
-        layout.addSpacing(16)
-
+        title = QLabel(title_text)
+        title.setObjectName("SectionTitle")
+        layout.addWidget(title)
+        layout.addSpacing(14)
         return card
 
-    def _add_row(self, card, title, description, control, left_value_widget=None):
+    # ── ROW FACTORY ──
+    def _row(self, label_text, hint_text, control, value_widget=None):
         row_frame = QFrame()
         row_frame.setObjectName("SettingRow")
 
-        row = QHBoxLayout(row_frame)
-        row.setContentsMargins(0, 14, 0, 14)
-        row.setSpacing(16)
+        row_layout = QHBoxLayout(row_frame)
+        row_layout.setContentsMargins(0, 14, 0, 14)
+        row_layout.setSpacing(20)
 
-        # Left: text
-        text_col = QVBoxLayout()
-        text_col.setSpacing(3)
+        # Left side: label + optional value + hint
+        left = QVBoxLayout()
+        left.setSpacing(3)
 
-        t = QLabel(title)
-        t.setObjectName("FieldLabel")
+        lbl = QLabel(label_text)
+        lbl.setObjectName("FieldLabel")
+        left.addWidget(lbl)
 
-        d = QLabel(description)
-        d.setObjectName("Subtitle")
-        d.setWordWrap(True)
+        if value_widget:
+            left.addWidget(value_widget)
 
-        text_col.addWidget(t)
-        if left_value_widget:
-            text_col.addWidget(left_value_widget)
-        text_col.addWidget(d)
+        hint = QLabel(hint_text)
+        hint.setObjectName("Subtitle")
+        hint.setWordWrap(True)
+        left.addWidget(hint)
 
-        row.addLayout(text_col, stretch=1)
-        row.addWidget(control, alignment=Qt.AlignVCenter)
+        row_layout.addLayout(left, stretch=1)
+        row_layout.addWidget(control, alignment=Qt.AlignVCenter | Qt.AlignRight)
+        return row_frame
 
-        card.layout().addWidget(row_frame)
-
-    # HELPERS
+    # ── LOGIC ──
     def load_settings(self):
-        current_theme    = database.get_setting("theme", ThemeManager.DARK)
-        current_currency = database.get_setting("currency", "GHS")
+        theme    = database.get_setting("theme", ThemeManager.DARK)
+        currency = database.get_setting("currency", "GHS")
 
         self.theme_combo.blockSignals(True)
         self.currency_combo.blockSignals(True)
-
-        self.theme_combo.setCurrentText("Light" if current_theme == ThemeManager.LIGHT else "Dark")
-        self.currency_combo.setCurrentText(current_currency)
-
+        self.theme_combo.setCurrentText("Light" if theme == ThemeManager.LIGHT else "Dark")
+        self.currency_combo.setCurrentText(currency)
         self.theme_combo.blockSignals(False)
         self.currency_combo.blockSignals(False)
 
@@ -218,12 +226,11 @@ class SettingsPage(QWidget):
 
     def refresh_counts(self):
         count = database.get_transaction_count()
-        self.transaction_count.setText(f"  {count} transaction record(s) stored")
+        self.transaction_count.setText(f"{count} transaction record(s) stored")
 
     def refresh_user(self):
         user = database.get_logged_in_user()
-        username = user["username"] if user else "Not authenticated"
-        self.user_label.setText(username)
+        self.user_label.setText(user["username"] if user else "Not authenticated")
 
     def logout(self):
         reply = QMessageBox.question(
