@@ -1,33 +1,26 @@
 import sys
 
 from PySide6.QtWidgets import (
-    QApplication,
-    QMainWindow,
-    QWidget,
-    QHBoxLayout,
-    QVBoxLayout,
-    QPushButton,
-    QStackedWidget,
-    QFrame,
-    QLabel,
-    QSpacerItem,
-    QSizePolicy
+    QApplication, QMainWindow, QWidget,
+    QHBoxLayout, QVBoxLayout, QPushButton,
+    QStackedWidget, QFrame, QLabel
 )
-
-from PySide6.QtGui import QFont
 from PySide6.QtCore import Qt
 
-from dashboard import Dashboard
-from add_transaction import AddTransactionPage
-from history_page import HistoryPage
-from analytics_page import AnalyticsPage
+from dashboard          import Dashboard
+from add_transaction    import AddTransactionPage
+from history_page       import HistoryPage
+from analytics_page     import AnalyticsPage
 from monthly_report_page import MonthlyReportPage
-from settings_page import SettingsPage
-from budget_page import BudgetPage
-from login_page import LoginPage
+from settings_page      import SettingsPage
+from budget_page        import BudgetPage
+from currency_page      import CurrencyPage
+from insights_page      import InsightsPage
+from login_page         import LoginPage
 
 import database
-from theme_manager import ThemeManager
+from theme_manager        import ThemeManager
+from user_data_migration  import migrate_to_per_user
 
 
 class MainWindow(QMainWindow):
@@ -39,96 +32,93 @@ class MainWindow(QMainWindow):
             raise PermissionError("Authentication required")
 
         self.logout_callback = logout_callback
-        self.current_user = database.get_logged_in_user()
-
         self.setWindowTitle("Smart Finance Tracker")
         self.setMinimumSize(1200, 720)
 
         database.create_table()
+        migrate_to_per_user()          # ← per-user data migration
 
-        # CENTRAL WIDGET
-        self.central_widget = QWidget()
-        self.setCentralWidget(self.central_widget)
+        central = QWidget()
+        self.setCentralWidget(central)
 
-        self.main_layout = QHBoxLayout(self.central_widget)
-        self.main_layout.setContentsMargins(0, 0, 0, 0)
-        self.main_layout.setSpacing(0)
+        root = QHBoxLayout(central)
+        root.setContentsMargins(0, 0, 0, 0)
+        root.setSpacing(0)
 
         # ── SIDEBAR ──
         self.sidebar = QFrame()
         self.sidebar.setObjectName("Sidebar")
         self.sidebar.setFixedWidth(220)
 
-        self.sidebar_layout = QVBoxLayout(self.sidebar)
-        self.sidebar_layout.setContentsMargins(14, 24, 14, 20)
-        self.sidebar_layout.setSpacing(2)
+        sb = QVBoxLayout(self.sidebar)
+        sb.setContentsMargins(14, 24, 14, 20)
+        sb.setSpacing(2)
 
         # Brand
         brand_row = QHBoxLayout()
         brand_row.setContentsMargins(8, 0, 8, 0)
-        brand_icon = QLabel("◈")
-        brand_icon.setStyleSheet("color: #3b82f6; font-size: 18px; background: transparent;")
-        brand_name = QLabel("Smart Finance")
-        brand_name.setObjectName("SidebarBrand")
-        brand_row.addWidget(brand_icon)
-        brand_row.addWidget(brand_name)
+        b_icon = QLabel("◈")
+        b_icon.setStyleSheet("color:#3b82f6;font-size:18px;background:transparent;")
+        b_name = QLabel("Smart Finance")
+        b_name.setObjectName("SidebarBrand")
+        brand_row.addWidget(b_icon)
+        brand_row.addWidget(b_name)
         brand_row.addStretch()
-        self.sidebar_layout.addLayout(brand_row)
+        sb.addLayout(brand_row)
 
-        # Divider
         divider = QFrame()
         divider.setObjectName("SidebarDivider")
         divider.setFixedHeight(1)
-        self.sidebar_layout.addSpacing(16)
-        self.sidebar_layout.addWidget(divider)
-        self.sidebar_layout.addSpacing(12)
+        sb.addSpacing(16)
+        sb.addWidget(divider)
+        sb.addSpacing(12)
 
-        # STACKED PAGES
+        # ── PAGES ──
         self.stack = QStackedWidget()
 
-        # (label, icon_char, page)
-        self.pages = [
-            ("Dashboard",       "⊞", Dashboard()),
-            ("Add Transaction", "+", AddTransactionPage()),
-            ("History",         "◷", HistoryPage()),
-            ("Analytics",       "⋮", AnalyticsPage()),
-            ("Monthly Report",  "≡", MonthlyReportPage()),
-            ("Settings",        "⚙", SettingsPage(self, self.logout)),
-            ("Budget",          "◎", BudgetPage()),
+        nav = [
+            ("Dashboard",       "⊞",  Dashboard()),
+            ("Add Transaction", "+",  AddTransactionPage()),
+            ("History",         "◷",  HistoryPage()),
+            ("Analytics",       "⋮",  AnalyticsPage()),
+            ("Monthly Report",  "≡",  MonthlyReportPage()),
+            ("Currency",        "₵",  CurrencyPage()),
+            ("Insights",        "✦",  InsightsPage()),
+            ("Settings",        "⚙",  SettingsPage(self, self.logout)),
+            ("Budget",          "◎",  BudgetPage()),
         ]
 
+        self.pages  = nav
         self.buttons = []
 
-        for index, (name, icon, page) in enumerate(self.pages):
-            btn = self.create_sidebar_button(name, icon)
-            btn.clicked.connect(lambda checked, i=index: self.switch_page(i))
-            self.sidebar_layout.addWidget(btn)
+        for idx, (name, icon, page) in enumerate(nav):
+            btn = self._nav_btn(name, icon)
+            btn.clicked.connect(lambda _, i=idx: self.switch_page(i))
+            sb.addWidget(btn)
             self.stack.addWidget(page)
             self.buttons.append(btn)
 
-        self.sidebar_layout.addStretch()
+        sb.addStretch()
 
-        # Logged-in user label at bottom
         user = database.get_logged_in_user()
-        username = user["username"] if user else ""
-        self.user_label = QLabel(f"● {username}")
-        self.user_label.setStyleSheet(
-            "color: #64748b; font-size: 12px; background: transparent; padding: 6px 10px;"
+        uname = user["username"] if user else ""
+        user_lbl = QLabel(f"● {uname}")
+        user_lbl.setStyleSheet(
+            "color:#64748b;font-size:12px;background:transparent;padding:6px 10px;"
         )
-        self.sidebar_layout.addWidget(self.user_label)
+        sb.addWidget(user_lbl)
 
-        self.main_layout.addWidget(self.sidebar)
-        self.main_layout.addWidget(self.stack)
+        root.addWidget(self.sidebar)
+        root.addWidget(self.stack)
 
         self.switch_page(0)
 
-    def create_sidebar_button(self, text, icon=""):
-        label = f"  {icon}  {text}" if icon else text
-        button = QPushButton(label)
-        button.setObjectName("SidebarButton")
-        button.setCursor(Qt.PointingHandCursor)
-        button.setMinimumHeight(42)
-        return button
+    def _nav_btn(self, text, icon=""):
+        btn = QPushButton(f"  {icon}  {text}" if icon else text)
+        btn.setObjectName("SidebarButton")
+        btn.setCursor(Qt.PointingHandCursor)
+        btn.setMinimumHeight(42)
+        return btn
 
     def switch_page(self, index):
         self.stack.setCurrentIndex(index)
@@ -155,7 +145,7 @@ if __name__ == "__main__":
     ThemeManager.apply_theme(app, saved_theme, save=False)
 
     window = None
-    login = None
+    login  = None
 
     def start_main():
         global window, login

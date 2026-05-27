@@ -17,8 +17,8 @@ class HistoryPage(QWidget):
     def __init__(self):
         super().__init__()
 
-        outer_layout = QVBoxLayout(self)
-        outer_layout.setContentsMargins(0, 0, 0, 0)
+        outer = QVBoxLayout(self)
+        outer.setContentsMargins(0, 0, 0, 0)
 
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
@@ -31,20 +31,18 @@ class HistoryPage(QWidget):
         self.main_layout.setSpacing(0)
 
         scroll.setWidget(container)
-        outer_layout.addWidget(scroll)
+        outer.addWidget(scroll)
 
         # ── HEADER ──
         header_row = QHBoxLayout()
-        title_col = QVBoxLayout()
-        title_col.setSpacing(4)
-
+        left = QVBoxLayout()
+        left.setSpacing(4)
         title = QLabel("Transaction History")
         title.setObjectName("PageTitle")
         subtitle = QLabel("Search, review, edit, and remove saved transaction records.")
         subtitle.setObjectName("Subtitle")
-
-        title_col.addWidget(title)
-        title_col.addWidget(subtitle)
+        left.addWidget(title)
+        left.addWidget(subtitle)
 
         self.export_btn = QPushButton("  ↓  Export CSV")
         self.export_btn.setObjectName("SuccessButton")
@@ -53,11 +51,11 @@ class HistoryPage(QWidget):
         self.export_btn.setCursor(Qt.PointingHandCursor)
         self.export_btn.clicked.connect(self.export_csv)
 
-        header_row.addLayout(title_col)
+        header_row.addLayout(left)
         header_row.addStretch()
         header_row.addWidget(self.export_btn)
         self.main_layout.addLayout(header_row)
-        self.main_layout.addSpacing(20)
+        self.main_layout.addSpacing(18)
 
         # ── FILTER BAR ──
         filter_row = QHBoxLayout()
@@ -86,17 +84,17 @@ class HistoryPage(QWidget):
         ])
         self.table.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum)
 
-        header = self.table.horizontalHeader()
-        header.setSectionResizeMode(0, QHeaderView.ResizeToContents)
-        header.setSectionResizeMode(1, QHeaderView.ResizeToContents)
-        header.setSectionResizeMode(2, QHeaderView.ResizeToContents)
-        header.setSectionResizeMode(3, QHeaderView.Stretch)
-        header.setSectionResizeMode(4, QHeaderView.ResizeToContents)
-        header.setSectionResizeMode(5, QHeaderView.ResizeToContents)
-        header.setSectionResizeMode(6, QHeaderView.Fixed)
-        header.setSectionResizeMode(7, QHeaderView.Fixed)
-        header.resizeSection(6, 80)
-        header.resizeSection(7, 90)
+        hdr = self.table.horizontalHeader()
+        hdr.setSectionResizeMode(0, QHeaderView.ResizeToContents)
+        hdr.setSectionResizeMode(1, QHeaderView.ResizeToContents)
+        hdr.setSectionResizeMode(2, QHeaderView.ResizeToContents)
+        hdr.setSectionResizeMode(3, QHeaderView.Stretch)
+        hdr.setSectionResizeMode(4, QHeaderView.ResizeToContents)
+        hdr.setSectionResizeMode(5, QHeaderView.ResizeToContents)
+        hdr.setSectionResizeMode(6, QHeaderView.Fixed)
+        hdr.setSectionResizeMode(7, QHeaderView.Fixed)
+        hdr.resizeSection(6, 90)
+        hdr.resizeSection(7, 100)
 
         self.table.setSelectionBehavior(QAbstractItemView.SelectRows)
         self.table.setEditTriggers(QAbstractItemView.NoEditTriggers)
@@ -111,7 +109,6 @@ class HistoryPage(QWidget):
 
         self.search_input.textChanged.connect(self.apply_filters)
         self.type_filter.currentTextChanged.connect(self.apply_filters)
-
         self.load_transactions()
 
         try:
@@ -130,82 +127,76 @@ class HistoryPage(QWidget):
     def apply_filters(self):
         search_text = self.search_input.text().strip()
         trans_type  = self.type_filter.currentText()
-        transactions = database.search_transactions(search_text, trans_type)
+        rows        = database.search_transactions(search_text, trans_type)
 
         self.table.setRowCount(0)
 
-        for row_number, row_data in enumerate(transactions):
-            self.table.insertRow(row_number)
+        for rn, row in enumerate(rows):
+            self.table.insertRow(rn)
 
-            transaction_id = row_data[0]
-            date        = row_data[1] or ""
-            category    = row_data[2] or ""
-            description = row_data[3] or ""
-            amount      = (row_data[4] or 0) / 100
-            t_type      = row_data[5] or ""
+            tid    = row[0]
+            date   = row[1] or ""
+            cat    = row[2] or ""
+            desc   = row[3] or ""
+            amount = (row[4] or 0) / 100
+            ttype  = row[5] or ""
 
-            values = [
-                str(transaction_id), date, category, description,
-                f"GHS {amount:,.2f}", t_type
-            ]
-
-            for col, value in enumerate(values):
-                item = QTableWidgetItem(value)
+            for col, val in enumerate([str(tid), date, cat, desc,
+                                        f"GHS {amount:,.2f}", ttype]):
+                item = QTableWidgetItem(val)
                 item.setTextAlignment(Qt.AlignVCenter | Qt.AlignLeft)
                 if col == 4:
                     item.setForeground(
-                        QColor("#22c55e") if t_type == "Income" else QColor("#ef4444")
+                        QColor("#22c55e") if ttype == "Income" else QColor("#ef4444")
                     )
-                self.table.setItem(row_number, col, item)
+                self.table.setItem(rn, col, item)
 
-            # Edit button — fixed width so text is always visible
+            # ── Edit button ──
             edit_btn = QPushButton("Edit")
             edit_btn.setObjectName("SecondaryButton")
-            edit_btn.setFixedSize(72, 32)
+            edit_btn.setFixedHeight(34)
+            edit_btn.setMinimumWidth(70)
             edit_btn.setCursor(Qt.PointingHandCursor)
-            edit_btn.clicked.connect(
-                lambda _, data=row_data: self.edit_transaction(data)
-            )
-            self.table.setCellWidget(row_number, 6, self._center_widget(edit_btn))
+            edit_btn.clicked.connect(lambda _, d=row: self.edit_transaction(d))
+            self.table.setCellWidget(rn, 6, self._wrap(edit_btn))
 
-            # Delete button
-            delete_btn = QPushButton("Delete")
-            delete_btn.setObjectName("DangerButton")
-            delete_btn.setFixedSize(80, 32)
-            delete_btn.setCursor(Qt.PointingHandCursor)
-            delete_btn.clicked.connect(
-                lambda _, tid=transaction_id: self.delete_transaction(tid)
-            )
-            self.table.setCellWidget(row_number, 7, self._center_widget(delete_btn))
+            # ── Delete button ──
+            del_btn = QPushButton("Delete")
+            del_btn.setObjectName("DangerButton")
+            del_btn.setFixedHeight(34)
+            del_btn.setMinimumWidth(78)
+            del_btn.setCursor(Qt.PointingHandCursor)
+            del_btn.clicked.connect(lambda _, i=tid: self.delete_transaction(i))
+            self.table.setCellWidget(rn, 7, self._wrap(del_btn))
 
-        # Fit height to rows
+        # ── Fit table height precisely ──
         self.table.resizeRowsToContents()
-        total_h = self.table.horizontalHeader().height() + 2
+        h = self.table.horizontalHeader().height() + 2
         for i in range(self.table.rowCount()):
-            total_h += self.table.rowHeight(i)
+            h += self.table.rowHeight(i)
         if self.table.rowCount() == 0:
-            total_h += 60  # empty state height
-        self.table.setFixedHeight(total_h)
+            h += 60
+        self.table.setFixedHeight(h)
 
-    def _center_widget(self, widget):
-        """Wrap a widget in a centered container so it sits nicely in the cell."""
-        wrap = QWidget()
-        layout = QHBoxLayout(wrap)
-        layout.setContentsMargins(4, 2, 4, 2)
-        layout.setAlignment(Qt.AlignCenter)
-        layout.addWidget(widget)
-        return wrap
+    def _wrap(self, widget):
+        w = QWidget()
+        lay = QHBoxLayout(w)
+        lay.setContentsMargins(6, 3, 6, 3)
+        lay.setAlignment(Qt.AlignCenter)
+        lay.addWidget(widget)
+        return w
 
-    def delete_transaction(self, transaction_id):
+    def delete_transaction(self, tid):
         reply = QMessageBox.question(
-            self, "Delete", "Are you sure you want to delete this transaction?",
+            self, "Delete", "Delete this transaction?",
             QMessageBox.Yes | QMessageBox.No
         )
         if reply == QMessageBox.Yes:
-            database.delete_transaction(transaction_id)
+            database.delete_transaction(tid)
             refresh_manager.data_changed.emit()
 
     def edit_transaction(self, transaction):
-        dialog = EditTransactionDialog(transaction)
-        if dialog.exec():
+        from edit_transaction_dialog import EditTransactionDialog
+        dlg = EditTransactionDialog(transaction)
+        if dlg.exec():
             self.load_transactions()

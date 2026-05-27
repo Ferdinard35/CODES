@@ -4,7 +4,7 @@ from PySide6.QtWidgets import (
     QAbstractItemView, QSizePolicy, QScrollArea
 )
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QColor, QFont
+from PySide6.QtGui import QColor
 import database
 from refresh import refresh_manager
 
@@ -14,10 +14,8 @@ class Dashboard(QWidget):
     def __init__(self):
         super().__init__()
 
-        # Outer scroll area so nothing gets clipped
-        outer_layout = QVBoxLayout(self)
-        outer_layout.setContentsMargins(0, 0, 0, 0)
-        outer_layout.setSpacing(0)
+        outer = QVBoxLayout(self)
+        outer.setContentsMargins(0, 0, 0, 0)
 
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
@@ -30,7 +28,7 @@ class Dashboard(QWidget):
         self.main_layout.setSpacing(0)
 
         scroll.setWidget(container)
-        outer_layout.addWidget(scroll)
+        outer.addWidget(scroll)
 
         # TITLE
         title = QLabel("Finance Dashboard")
@@ -43,14 +41,12 @@ class Dashboard(QWidget):
         self.main_layout.addWidget(subtitle)
         self.main_layout.addSpacing(20)
 
-        # ── SUMMARY CARDS ──
+        # ── CARDS ──
         cards_row = QHBoxLayout()
         cards_row.setSpacing(16)
-
-        self.balance_card, self.balance_value = self._create_card("Current Balance", "primary")
-        self.income_card,  self.income_value  = self._create_card("Total Income",    "success")
-        self.expense_card, self.expense_value = self._create_card("Total Expenses",  "danger")
-
+        self.balance_card, self.balance_value = self._card("Current Balance", "primary")
+        self.income_card,  self.income_value  = self._card("Total Income",    "success")
+        self.expense_card, self.expense_value = self._card("Total Expenses",  "danger")
         cards_row.addWidget(self.balance_card)
         cards_row.addWidget(self.income_card)
         cards_row.addWidget(self.expense_card)
@@ -58,26 +54,22 @@ class Dashboard(QWidget):
         self.main_layout.addSpacing(24)
 
         # ── RECENT TRANSACTIONS ──
-        recent_label = QLabel("Recent Transactions")
-        recent_label.setObjectName("SectionTitle")
-        self.main_layout.addWidget(recent_label)
+        lbl = QLabel("Recent Transactions")
+        lbl.setObjectName("SectionTitle")
+        self.main_layout.addWidget(lbl)
         self.main_layout.addSpacing(10)
 
-        # TABLE — no wrapper frame, table IS the card visually
         self.table = QTableWidget()
-        self.table.setObjectName("DashTable")
         self.table.setColumnCount(5)
-        self.table.setHorizontalHeaderLabels([
-            "Date", "Category", "Description", "Amount", "Type"
-        ])
+        self.table.setHorizontalHeaderLabels(["Date", "Category", "Description", "Amount", "Type"])
         self.table.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum)
 
-        header = self.table.horizontalHeader()
-        header.setSectionResizeMode(0, QHeaderView.ResizeToContents)
-        header.setSectionResizeMode(1, QHeaderView.ResizeToContents)
-        header.setSectionResizeMode(2, QHeaderView.Stretch)
-        header.setSectionResizeMode(3, QHeaderView.ResizeToContents)
-        header.setSectionResizeMode(4, QHeaderView.ResizeToContents)
+        hdr = self.table.horizontalHeader()
+        hdr.setSectionResizeMode(0, QHeaderView.ResizeToContents)
+        hdr.setSectionResizeMode(1, QHeaderView.ResizeToContents)
+        hdr.setSectionResizeMode(2, QHeaderView.Stretch)
+        hdr.setSectionResizeMode(3, QHeaderView.ResizeToContents)
+        hdr.setSectionResizeMode(4, QHeaderView.ResizeToContents)
 
         self.table.setSelectionBehavior(QAbstractItemView.SelectRows)
         self.table.setEditTriggers(QAbstractItemView.NoEditTriggers)
@@ -93,57 +85,56 @@ class Dashboard(QWidget):
         self.refresh_data()
         refresh_manager.data_changed.connect(self.refresh_data)
 
-    def _create_card(self, title, accent):
+    def _card(self, title, accent):
         card = QFrame()
         card.setObjectName("Card")
-        layout = QVBoxLayout(card)
-        layout.setContentsMargins(24, 20, 24, 20)
-        layout.setSpacing(8)
+        lay = QVBoxLayout(card)
+        lay.setContentsMargins(24, 20, 24, 20)
+        lay.setSpacing(8)
 
-        title_lbl = QLabel(title.upper())
-        title_lbl.setObjectName("MetricTitle")
+        t = QLabel(title.upper())
+        t.setObjectName("MetricTitle")
 
-        value_lbl = QLabel("GHS 0.00")
-        value_lbl.setObjectName("MetricValue")
-        value_lbl.setProperty("accent", accent)
+        v = QLabel("GHS 0.00")
+        v.setObjectName("MetricValue")
+        v.setProperty("accent", accent)
 
-        layout.addWidget(title_lbl)
-        layout.addWidget(value_lbl)
-        return card, value_lbl
+        lay.addWidget(t)
+        lay.addWidget(v)
+        return card, v
 
     def refresh_data(self):
         self.balance_value.setText(f"GHS {database.get_balance():,.2f}")
         self.income_value.setText(f"GHS {database.get_total_income():,.2f}")
         self.expense_value.setText(f"GHS {database.get_total_expenses():,.2f}")
-        self.load_recent_transactions()
+        self._load_table()
 
-    def load_recent_transactions(self):
-        transactions = database.get_transactions()
+    def _load_table(self):
+        txns = database.get_transactions()
         self.table.setRowCount(0)
 
-        for row_number, row_data in enumerate(transactions):
-            self.table.insertRow(row_number)
+        for rn, row in enumerate(txns):
+            self.table.insertRow(rn)
+            date   = row[1]
+            cat    = row[2]
+            desc   = row[3]
+            amount = row[4] / 100
+            ttype  = row[5]
 
-            date        = row_data[1]
-            category    = row_data[2]
-            description = row_data[3]
-            amount      = row_data[4] / 100
-            trans_type  = row_data[5]
-
-            values = [date, category, description, f"GHS {amount:,.2f}", trans_type]
-
-            for col, value in enumerate(values):
-                item = QTableWidgetItem(value)
+            for col, val in enumerate([date, cat, desc, f"GHS {amount:,.2f}", ttype]):
+                item = QTableWidgetItem(val)
                 item.setTextAlignment(Qt.AlignVCenter | Qt.AlignLeft)
                 if col in [3, 4]:
                     item.setForeground(
-                        QColor("#22c55e") if trans_type == "Income" else QColor("#ef4444")
+                        QColor("#22c55e") if ttype == "Income" else QColor("#ef4444")
                     )
-                self.table.setItem(row_number, col, item)
+                self.table.setItem(rn, col, item)
 
-        # Fit table height exactly to rows — no overflow, no gap
+        # Fit height — table clips itself neatly
         self.table.resizeRowsToContents()
-        total_h = self.table.horizontalHeader().height() + 2
+        h = self.table.horizontalHeader().height() + 2
         for i in range(self.table.rowCount()):
-            total_h += self.table.rowHeight(i)
-        self.table.setFixedHeight(total_h)
+            h += self.table.rowHeight(i)
+        if self.table.rowCount() == 0:
+            h += 60
+        self.table.setFixedHeight(h)
