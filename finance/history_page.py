@@ -10,16 +10,11 @@ import database
 from refresh import refresh_manager
 from edit_transaction_dialog import EditTransactionDialog
 from export_utils import export_transactions_to_csv
+from table_utils import RoundedTableWidget, fit_table_height_to_rows
 
 
 def _fit(table):
-    table.resizeRowsToContents()
-    h = table.horizontalHeader().height() + 2
-    for i in range(table.rowCount()):
-        h += table.rowHeight(i)
-    if table.rowCount() == 0:
-        h += 60
-    table.setFixedHeight(h)
+    fit_table_height_to_rows(table)
 
 
 class HistoryPage(QWidget):
@@ -38,15 +33,14 @@ class HistoryPage(QWidget):
         self.ml = QVBoxLayout(ctr)
         self.ml.setContentsMargins(36, 36, 36, 36)
         self.ml.setSpacing(0)
-
         scroll.setWidget(ctr)
         outer.addWidget(scroll)
 
-        # Header row
+        # Header
         hdr = QHBoxLayout()
         left = QVBoxLayout(); left.setSpacing(4)
         title = QLabel("Transaction History"); title.setObjectName("PageTitle")
-        sub   = QLabel("Search, review, edit, and remove saved transaction records.")
+        sub = QLabel("Search, review, edit, and remove saved transaction records.")
         sub.setObjectName("Subtitle")
         left.addWidget(title); left.addWidget(sub)
 
@@ -61,23 +55,21 @@ class HistoryPage(QWidget):
         self.ml.addLayout(hdr)
         self.ml.addSpacing(18)
 
-        # Filter bar
+        # Filter
         frow = QHBoxLayout(); frow.setSpacing(12)
         self.search_input = QLineEdit()
         self.search_input.setPlaceholderText("Search category or description...")
         self.search_input.setMinimumHeight(40)
-
         self.type_filter = QComboBox()
         self.type_filter.addItems(["All", "Income", "Expense"])
         self.type_filter.setMinimumHeight(40)
         self.type_filter.setFixedWidth(140)
-
         frow.addWidget(self.search_input); frow.addWidget(self.type_filter)
         self.ml.addLayout(frow)
         self.ml.addSpacing(14)
 
         # Table
-        self.table = QTableWidget()
+        self.table = RoundedTableWidget()
         self.table.setColumnCount(8)
         self.table.setHorizontalHeaderLabels([
             "ID", "Date", "Category", "Description",
@@ -94,8 +86,9 @@ class HistoryPage(QWidget):
         hd.setSectionResizeMode(5, QHeaderView.ResizeToContents)
         hd.setSectionResizeMode(6, QHeaderView.Fixed)
         hd.setSectionResizeMode(7, QHeaderView.Fixed)
-        hd.resizeSection(6, 68)
-        hd.resizeSection(7, 76)
+        # Give columns 6+7 just enough room for the compact buttons + padding
+        hd.resizeSection(6, 90)
+        hd.resizeSection(7, 104)
 
         self.table.setSelectionBehavior(QAbstractItemView.SelectRows)
         self.table.setEditTriggers(QAbstractItemView.NoEditTriggers)
@@ -104,6 +97,8 @@ class HistoryPage(QWidget):
         self.table.setShowGrid(False)
         self.table.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.table.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        # Row height — give buttons a little breathing room
+        self.table.verticalHeader().setDefaultSectionSize(50)
 
         self.ml.addWidget(self.table)
         self.ml.addStretch()
@@ -150,33 +145,31 @@ class HistoryPage(QWidget):
                         QColor("#22c55e") if ttype == "Income" else QColor("#ef4444"))
                 self.table.setItem(rn, col, item)
 
-            # ── compact Edit button ──
+            # Compact Edit button — outline style, fills on hover via CSS
             eb = QPushButton("Edit")
             eb.setObjectName("EditBtn")
-            eb.setFixedHeight(30)
-            eb.setFixedWidth(58)
             eb.setCursor(Qt.PointingHandCursor)
             eb.clicked.connect(lambda _, d=row: self.edit_transaction(d))
-            self.table.setCellWidget(rn, 6, self._wrap(eb))
+            self.table.setCellWidget(rn, 6, self._center(eb))
 
-            # ── compact Delete button ──
+            # Compact Delete button
             db = QPushButton("Delete")
             db.setObjectName("DeleteBtn")
-            db.setFixedHeight(30)
-            db.setFixedWidth(64)
             db.setCursor(Qt.PointingHandCursor)
             db.clicked.connect(lambda _, i=tid: self.delete_transaction(i))
-            self.table.setCellWidget(rn, 7, self._wrap(db))
+            self.table.setCellWidget(rn, 7, self._center(db))
 
         _fit(self.table)
 
-    def _wrap(self, w):
-        wrapper = QWidget()
-        lay = QHBoxLayout(wrapper)
-        lay.setContentsMargins(4, 2, 4, 2)
+    def _center(self, widget):
+        """Center a widget inside a transparent cell container."""
+        wrap = QWidget()
+        wrap.setStyleSheet("background: transparent;")
+        lay = QHBoxLayout(wrap)
+        lay.setContentsMargins(6, 6, 6, 6)
         lay.setAlignment(Qt.AlignCenter)
-        lay.addWidget(w)
-        return wrapper
+        lay.addWidget(widget)
+        return wrap
 
     def delete_transaction(self, tid):
         reply = QMessageBox.question(

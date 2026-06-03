@@ -14,6 +14,7 @@ from PySide6.QtGui import QFont
 
 import database
 from currency_converter import fetch_rates, convert, format_amount, SUPPORTED
+from table_utils import RoundedTableWidget, fit_table_height_to_rows
 
 
 # ── Background worker so the UI never freezes ──────────────────────
@@ -142,7 +143,7 @@ class CurrencyPage(QWidget):
         main.addWidget(rates_title)
         main.addSpacing(10)
 
-        self.rate_table = QTableWidget()
+        self.rate_table = RoundedTableWidget()
         self.rate_table.setColumnCount(3)
         self.rate_table.setHorizontalHeaderLabels(["Currency", "1 GHS =", "1 Unit → GHS"])
         self.rate_table.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum)
@@ -205,12 +206,7 @@ class CurrencyPage(QWidget):
             inv = 1.0 / rate if rate else 0
             self.rate_table.setItem(i, 2, QTableWidgetItem(f"{inv:.4f} GHS"))
 
-        # fit height
-        self.rate_table.resizeRowsToContents()
-        h = self.rate_table.horizontalHeader().height() + 2
-        for i in range(self.rate_table.rowCount()):
-            h += self.rate_table.rowHeight(i)
-        self.rate_table.setFixedHeight(h)
+        fit_table_height_to_rows(self.rate_table)
 
     def do_convert(self):
         text = self.amount_input.text().strip()

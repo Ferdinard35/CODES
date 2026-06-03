@@ -62,24 +62,27 @@ def get_stylesheet(theme):
     QScrollArea > QWidget > QWidget {{ background: transparent; }}
 
     QLabel {{ background: transparent; color: {c["text"]}; }}
-    QLabel#PageTitle {{ font-size: 22px; font-weight: 700; color: {c["text"]}; }}
-    QLabel#Subtitle {{ color: {c["muted"]}; font-size: 13px; }}
-    QLabel#SectionTitle {{ color: {c["text"]}; font-size: 15px; font-weight: 700; }}
+    QLabel#PageTitle  {{ font-size: 22px; font-weight: 700; }}
+    QLabel#Subtitle   {{ color: {c["muted"]}; font-size: 13px; }}
+    QLabel#SectionTitle {{ font-size: 15px; font-weight: 700; }}
     QLabel#FieldLabel {{
-        color: {c["muted"]}; font-size: 11px; font-weight: 700; letter-spacing: 0.06em;
+        color: {c["muted"]}; font-size: 11px;
+        font-weight: 700; letter-spacing: 0.06em;
     }}
     QLabel#MetricTitle {{
-        font-size: 11px; font-weight: 600; color: {c["muted"]}; letter-spacing: 0.06em;
+        font-size: 11px; font-weight: 600;
+        color: {c["muted"]}; letter-spacing: 0.06em;
     }}
     QLabel#MetricValue {{
-        font-size: 24px; font-weight: 700; letter-spacing: -0.02em; color: {c["text"]};
+        font-size: 24px; font-weight: 700;
+        letter-spacing: -0.02em; color: {c["text"]};
     }}
     QLabel#MetricValue[accent="primary"] {{ color: {c["primary"]}; }}
     QLabel#MetricValue[accent="success"] {{ color: {c["success"]}; }}
-    QLabel#MetricValue[accent="danger"]  {{ color: {c["danger"]}; }}
-    QLabel#StatusLabel[state="warning"] {{ color: {c["warning"]}; font-weight: 600; font-size: 13px; }}
-    QLabel#StatusLabel[state="danger"]  {{ color: {c["danger"]};  font-weight: 600; font-size: 13px; }}
-    QLabel#StatusLabel[state="success"] {{ color: {c["success"]}; font-weight: 600; font-size: 13px; }}
+    QLabel#MetricValue[accent="danger"]  {{ color: {c["danger"]};  }}
+    QLabel#StatusLabel[state="warning"] {{ color: {c["warning"]}; font-weight: 600; }}
+    QLabel#StatusLabel[state="danger"]  {{ color: {c["danger"]};  font-weight: 600; }}
+    QLabel#StatusLabel[state="success"] {{ color: {c["success"]}; font-weight: 600; }}
 
     QFrame#Card, QFrame#FormCard, QFrame#TableCard,
     QFrame#ChartCard, QFrame#SettingsCard, QFrame#LoginCard {{
@@ -87,38 +90,42 @@ def get_stylesheet(theme):
         border: 1px solid {c["border"]};
         border-radius: 12px;
     }}
-
     QFrame#Sidebar {{
         background-color: {c["sidebar"]};
         border-right: 1px solid {c["border"]};
     }}
     QLabel#SidebarBrand {{
-        color: #f1f5f9; font-size: 16px; font-weight: 700; background: transparent;
+        color: #f1f5f9; font-size: 16px;
+        font-weight: 700; background: transparent;
     }}
     QFrame#SidebarDivider {{
-        background-color: {c["border"]}; border: none; max-height: 1px; min-height: 1px;
+        background-color: {c["border"]};
+        border: none; max-height: 1px; min-height: 1px;
     }}
-
-    QPushButton#SidebarButton {{
-        background-color: transparent; color: {c["muted"]}; border: none;
-        border-radius: 8px; padding: 10px 14px; text-align: left;
-        font-size: 13px; font-weight: 500;
-    }}
-    QPushButton#SidebarButton:hover {{ background-color: {c["sidebar_hover"]}; color: {c["text"]}; }}
-    QPushButton#SidebarButton[active="true"] {{
-        background-color: {c["sidebar_active"]}; color: #ffffff; font-weight: 600;
-    }}
-
     QFrame#SettingRow {{
         background-color: transparent; border: none;
         border-bottom: 1px solid {c["border"]}; min-height: 72px;
+    }}
+
+    QPushButton#SidebarButton {{
+        background-color: transparent; color: {c["muted"]};
+        border: none; border-radius: 8px; padding: 10px 14px;
+        text-align: left; font-size: 13px; font-weight: 500;
+    }}
+    QPushButton#SidebarButton:hover {{
+        background-color: {c["sidebar_hover"]}; color: {c["text"]};
+    }}
+    QPushButton#SidebarButton[active="true"] {{
+        background-color: {c["sidebar_active"]};
+        color: #ffffff; font-weight: 600;
     }}
 
     QLineEdit, QTextEdit, QComboBox, QDateEdit {{
         background-color: {c["field"]}; color: {c["text"]};
         border: 1px solid {c["border"]}; border-radius: 8px;
         padding: 9px 12px; font-size: 14px;
-        selection-background-color: {c["primary"]}; selection-color: #ffffff;
+        selection-background-color: {c["primary"]};
+        selection-color: #ffffff;
     }}
     QLineEdit:focus, QTextEdit:focus, QComboBox:focus, QDateEdit:focus {{
         border: 1.5px solid {c["input_focus"]};
@@ -130,12 +137,14 @@ def get_stylesheet(theme):
     QComboBox QAbstractItemView {{
         background-color: {c["surface"]}; color: {c["text"]};
         border: 1px solid {c["border"]};
-        selection-background-color: {c["primary"]}; selection-color: #ffffff; padding: 4px;
+        selection-background-color: {c["primary"]};
+        selection-color: #ffffff; padding: 4px;
     }}
 
     QPushButton {{
-        background-color: {c["primary"]}; color: #ffffff; border: none;
-        border-radius: 8px; padding: 10px 18px; font-size: 14px; font-weight: 600;
+        background-color: {c["primary"]}; color: #ffffff;
+        border: none; border-radius: 8px;
+        padding: 10px 18px; font-size: 14px; font-weight: 600;
     }}
     QPushButton:hover {{ background-color: {c["primary_hover"]}; }}
 
@@ -143,81 +152,95 @@ def get_stylesheet(theme):
     QPushButton#SuccessButton:hover {{ background-color: #15803d; }}
     QPushButton#DangerButton  {{ background-color: {c["danger"]};  color: #ffffff; }}
     QPushButton#DangerButton:hover  {{ background-color: #b91c1c; }}
-
     QPushButton#SecondaryButton {{
         background-color: transparent; color: {c["primary"]};
         border: 1.5px solid {c["primary"]};
     }}
     QPushButton#SecondaryButton:hover {{ background-color: {c["hover"]}; }}
-
     QPushButton#LinkButton {{
-        background-color: transparent; color: {c["primary"]}; border: none;
-        padding: 4px 8px; font-weight: 600; font-size: 13px;
+        background-color: transparent; color: {c["primary"]};
+        border: none; padding: 4px 8px;
+        font-weight: 600; font-size: 13px;
     }}
 
-    /* ── compact icon-style action buttons in tables ── */
+    QPushButton#ToggleInactive {{
+        background-color: transparent; color: {c["muted"]};
+        border: none; border-radius: 6px;
+        padding: 6px 14px; font-size: 13px; font-weight: 500;
+    }}
+    QPushButton#ToggleInactive:hover {{
+        background-color: {c["hover"]}; color: {c["text"]};
+    }}
+    QPushButton#ToggleIncomeActive {{
+        background-color: #16a34a; color: #ffffff; border: none;
+        border-radius: 6px; padding: 6px 14px;
+        font-size: 13px; font-weight: 600;
+    }}
+    QPushButton#ToggleExpenseActive {{
+        background-color: {c["danger"]}; color: #ffffff; border: none;
+        border-radius: 6px; padding: 6px 14px;
+        font-size: 13px; font-weight: 600;
+    }}
+
     QPushButton#EditBtn {{
         background-color: transparent;
         color: {c["primary"]};
         border: 1px solid {c["primary"]};
-        border-radius: 6px;
+        border-radius: 8px;
         padding: 4px 10px;
         font-size: 12px;
         font-weight: 600;
+        min-width: 62px;
+        max-width: 62px;
+        min-height: 30px;
+        max-height: 30px;
     }}
-    QPushButton#EditBtn:hover {{ background-color: {c["primary"]}; color: #ffffff; }}
-
+    QPushButton#EditBtn:hover {{
+        background-color: {c["primary"]};
+        color: #ffffff;
+    }}
     QPushButton#DeleteBtn {{
         background-color: transparent;
         color: {c["danger"]};
         border: 1px solid {c["danger"]};
-        border-radius: 6px;
+        border-radius: 8px;
         padding: 4px 10px;
         font-size: 12px;
         font-weight: 600;
+        min-width: 74px;
+        max-width: 74px;
+        min-height: 30px;
+        max-height: 30px;
     }}
-    QPushButton#DeleteBtn:hover {{ background-color: {c["danger"]}; color: #ffffff; }}
-
-    QPushButton#ToggleInactive {{
-        background-color: transparent; color: {c["muted"]}; border: none;
-        border-radius: 6px; padding: 6px 14px; font-size: 13px; font-weight: 500;
-    }}
-    QPushButton#ToggleInactive:hover {{ background-color: {c["hover"]}; color: {c["text"]}; }}
-    QPushButton#ToggleIncomeActive {{
-        background-color: #16a34a; color: #ffffff; border: none;
-        border-radius: 6px; padding: 6px 14px; font-size: 13px; font-weight: 600;
-    }}
-    QPushButton#ToggleExpenseActive {{
-        background-color: {c["danger"]}; color: #ffffff; border: none;
-        border-radius: 6px; padding: 6px 14px; font-size: 13px; font-weight: 600;
+    QPushButton#DeleteBtn:hover {{
+        background-color: {c["danger"]};
+        color: #ffffff;
     }}
 
-    /* ── TABLE: full radius on all four corners ── */
     QTableWidget {{
         background-color: {c["surface"]};
         alternate-background-color: {c["table_alt"]};
         color: {c["text"]};
         border: 1px solid {c["border"]};
+        border-bottom: 0px;
         border-radius: 12px;
+        padding: 0px;
         gridline-color: transparent;
         selection-background-color: {c["primary"]};
         selection-color: #ffffff;
         font-size: 13px;
     }}
+    QTableWidget::viewport {{
+        background-color: {c["surface"]};
+        border-bottom-left-radius: 11px;
+        border-bottom-right-radius: 11px;
+    }}
     QTableWidget::item {{
         padding: 10px 14px;
-        border-bottom: 1px solid {c["border"]};
-    }}
-    QTableWidget::item:last {{
-        border-bottom: none;
+        border: none;
     }}
     QTableWidget::item:selected {{
         background-color: {c["primary"]}; color: #ffffff;
-    }}
-    QTableCornerButton::section {{
-        background-color: {c["header"]};
-        border: none;
-        border-top-left-radius: 12px;
     }}
     QHeaderView {{
         background-color: transparent;
@@ -230,12 +253,13 @@ def get_stylesheet(theme):
         padding: 10px 14px;
         font-size: 11px; font-weight: 700; letter-spacing: 0.06em;
     }}
-    QHeaderView::section:first  {{ border-top-left-radius: 11px; }}
-    QHeaderView::section:last   {{ border-top-right-radius: 11px; }}
+    QHeaderView::section:first {{ border-top-left-radius: 11px; }}
+    QHeaderView::section:last  {{ border-top-right-radius: 11px; }}
 
     QProgressBar {{
-        background-color: {c["surface_alt"]}; border: none; border-radius: 6px;
-        height: 12px; text-align: center; font-size: 12px; font-weight: 600;
+        background-color: {c["surface_alt"]}; border: none;
+        border-radius: 6px; height: 12px;
+        text-align: center; font-size: 12px; font-weight: 600;
     }}
     QProgressBar::chunk {{ background-color: {c["primary"]}; border-radius: 6px; }}
 

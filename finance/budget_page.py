@@ -9,16 +9,11 @@ from PySide6.QtGui import QColor, QDoubleValidator
 from datetime import datetime
 import database
 from refresh import refresh_manager
+from table_utils import RoundedTableWidget, fit_table_height_to_rows
 
 
 def _fit(table):
-    table.resizeRowsToContents()
-    h = table.horizontalHeader().height() + 2
-    for i in range(table.rowCount()):
-        h += table.rowHeight(i)
-    if table.rowCount() == 0:
-        h += 60
-    table.setFixedHeight(h)
+    fit_table_height_to_rows(table)
 
 
 # ── Edit Budget Dialog ─────────────────────────────────────────────
@@ -183,7 +178,7 @@ class BudgetPage(QWidget):
         main.addWidget(self._lbl("This Month's Expenses", "SectionTitle"))
         main.addSpacing(10)
 
-        self.exp_table = QTableWidget()
+        self.exp_table = RoundedTableWidget()
         self.exp_table.setColumnCount(4)
         self.exp_table.setHorizontalHeaderLabels(
             ["Date", "Category", "Description", "Amount"])

@@ -7,23 +7,11 @@ from PySide6.QtCore import Qt
 from PySide6.QtGui import QColor
 import database
 from refresh import refresh_manager
+from table_utils import RoundedTableWidget, fit_table_height_to_rows
 
 
 def _fit(table):
-    table.resizeRowsToContents()
-    h = table.horizontalHeader().height() + 2
-    for i in range(table.rowCount()):
-        h += table.rowHeight(i)
-    if table.rowCount() == 0:
-        h += 60
-    table.setFixedHeight(h)
-    # remove border on very last item so bottom-radius looks clean
-    last = table.rowCount() - 1
-    if last >= 0:
-        for c in range(table.columnCount()):
-            it = table.item(last, c)
-            if it:
-                it.setData(Qt.UserRole + 1, "last")
+    fit_table_height_to_rows(table)
 
 
 class Dashboard(QWidget):
@@ -93,7 +81,7 @@ class Dashboard(QWidget):
         return card, v
 
     def _make_table(self, headers):
-        t = QTableWidget()
+        t = RoundedTableWidget()
         t.setColumnCount(len(headers))
         t.setHorizontalHeaderLabels(headers)
         t.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum)
