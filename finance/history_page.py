@@ -14,7 +14,7 @@ from table_utils import RoundedTableWidget, fit_table_height_to_rows
 
 
 def _fit(table):
-    fit_table_height_to_rows(table)
+    fit_table_height_to_rows(table, resize_rows=False)
 
 
 class HistoryPage(QWidget):
@@ -87,8 +87,8 @@ class HistoryPage(QWidget):
         hd.setSectionResizeMode(6, QHeaderView.Fixed)
         hd.setSectionResizeMode(7, QHeaderView.Fixed)
         # Give columns 6+7 just enough room for the compact buttons + padding
-        hd.resizeSection(6, 90)
-        hd.resizeSection(7, 104)
+        hd.resizeSection(6, 136)
+        hd.resizeSection(7, 148)
 
         self.table.setSelectionBehavior(QAbstractItemView.SelectRows)
         self.table.setEditTriggers(QAbstractItemView.NoEditTriggers)
@@ -98,7 +98,7 @@ class HistoryPage(QWidget):
         self.table.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.table.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         # Row height — give buttons a little breathing room
-        self.table.verticalHeader().setDefaultSectionSize(50)
+        self.table.verticalHeader().setDefaultSectionSize(66)
 
         self.ml.addWidget(self.table)
         self.ml.addStretch()
@@ -129,6 +129,7 @@ class HistoryPage(QWidget):
 
         for rn, row in enumerate(rows):
             self.table.insertRow(rn)
+            self.table.setRowHeight(rn, 64)
             tid    = row[0]
             date   = row[1] or ""
             cat    = row[2] or ""
@@ -148,6 +149,7 @@ class HistoryPage(QWidget):
             # Compact Edit button — outline style, fills on hover via CSS
             eb = QPushButton("Edit")
             eb.setObjectName("EditBtn")
+            eb.setFixedSize(96, 40)
             eb.setCursor(Qt.PointingHandCursor)
             eb.clicked.connect(lambda _, d=row: self.edit_transaction(d))
             self.table.setCellWidget(rn, 6, self._center(eb))
@@ -155,6 +157,7 @@ class HistoryPage(QWidget):
             # Compact Delete button
             db = QPushButton("Delete")
             db.setObjectName("DeleteBtn")
+            db.setFixedSize(108, 40)
             db.setCursor(Qt.PointingHandCursor)
             db.clicked.connect(lambda _, i=tid: self.delete_transaction(i))
             self.table.setCellWidget(rn, 7, self._center(db))
@@ -164,9 +167,9 @@ class HistoryPage(QWidget):
     def _center(self, widget):
         """Center a widget inside a transparent cell container."""
         wrap = QWidget()
-        wrap.setStyleSheet("background: transparent;")
+        wrap.setObjectName("ActionCell")
         lay = QHBoxLayout(wrap)
-        lay.setContentsMargins(6, 6, 6, 6)
+        lay.setContentsMargins(12, 11, 12, 11)
         lay.setAlignment(Qt.AlignCenter)
         lay.addWidget(widget)
         return wrap

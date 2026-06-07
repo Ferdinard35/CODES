@@ -182,38 +182,44 @@ def get_stylesheet(theme):
         font-size: 13px; font-weight: 600;
     }}
 
-    QPushButton#EditBtn {{
+    QWidget#ActionCell {{
         background-color: transparent;
-        color: {c["primary"]};
-        border: 1px solid {c["primary"]};
+        border: none;
+    }}
+
+    QPushButton#EditBtn {{
+        background-color: {c["primary"]};
+        color: #ffffff;
+        border: none;
         border-radius: 8px;
-        padding: 4px 10px;
-        font-size: 12px;
-        font-weight: 600;
-        min-width: 62px;
-        max-width: 62px;
-        min-height: 30px;
-        max-height: 30px;
+        padding: 10px 18px;
+        font-size: 14px;
+        font-weight: 700;
+        min-width: 96px;
+        max-width: 96px;
+        min-height: 40px;
+        max-height: 40px;
     }}
     QPushButton#EditBtn:hover {{
-        background-color: {c["primary"]};
+        background-color: {c["primary_hover"]};
         color: #ffffff;
     }}
     QPushButton#DeleteBtn {{
-        background-color: transparent;
-        color: {c["danger"]};
-        border: 1px solid {c["danger"]};
+        background-color: {c["danger"]};
+        color: #ffffff;
+        border: none;
         border-radius: 8px;
-        padding: 4px 10px;
-        font-size: 12px;
-        font-weight: 600;
-        min-width: 74px;
-        max-width: 74px;
-        min-height: 30px;
-        max-height: 30px;
+        padding: 10px 18px;
+        font-size: 14px;
+        font-weight: 700;
+        min-width: 108px;
+        max-width: 108px;
+        min-height: 40px;
+        max-height: 40px;
     }}
     QPushButton#DeleteBtn:hover {{
-        background-color: {c["danger"]};
+        background-color: #b91c1c;
+        border: 1px solid #fca5a5;
         color: #ffffff;
     }}
 

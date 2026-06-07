@@ -95,12 +95,15 @@ class RoundedTableWidget(QTableWidget):
                 painter.drawLine(left, y, right, y)
 
 
-def fit_table_height_to_rows(table, min_rows=0, max_rows=14, empty_height=60):
+def fit_table_height_to_rows(
+    table, min_rows=0, max_rows=14, empty_height=60, resize_rows=True
+):
     """
     Resize the table so it shows exactly its rows with no blank space,
     and the rounded border-radius looks correct on all four corners.
     """
-    table.resizeRowsToContents()
+    if resize_rows:
+        table.resizeRowsToContents()
 
     row_count    = table.rowCount()
     visible_rows = max(min_rows, min(row_count, max_rows))
