@@ -182,45 +182,29 @@ def get_stylesheet(theme):
         font-size: 13px; font-weight: 600;
     }}
 
-    QWidget#ActionCell {{
-        background-color: transparent;
-        border: none;
-    }}
-
     QPushButton#EditBtn {{
         background-color: {c["primary"]};
         color: #ffffff;
         border: none;
-        border-radius: 8px;
-        padding: 10px 18px;
-        font-size: 14px;
-        font-weight: 700;
-        min-width: 96px;
-        max-width: 96px;
-        min-height: 40px;
-        max-height: 40px;
+        border-radius: 6px;
+        padding: 5px 12px;
+        font-size: 13px;
+        font-weight: 600;
     }}
     QPushButton#EditBtn:hover {{
         background-color: {c["primary_hover"]};
-        color: #ffffff;
     }}
     QPushButton#DeleteBtn {{
         background-color: {c["danger"]};
         color: #ffffff;
         border: none;
-        border-radius: 8px;
-        padding: 10px 18px;
-        font-size: 14px;
-        font-weight: 700;
-        min-width: 108px;
-        max-width: 108px;
-        min-height: 40px;
-        max-height: 40px;
+        border-radius: 6px;
+        padding: 5px 12px;
+        font-size: 13px;
+        font-weight: 600;
     }}
     QPushButton#DeleteBtn:hover {{
         background-color: #b91c1c;
-        border: 1px solid #fca5a5;
-        color: #ffffff;
     }}
 
     QTableWidget {{
@@ -228,22 +212,24 @@ def get_stylesheet(theme):
         alternate-background-color: {c["table_alt"]};
         color: {c["text"]};
         border: 1px solid {c["border"]};
-        border-bottom: 0px;
         border-radius: 12px;
-        padding: 0px;
         gridline-color: transparent;
         selection-background-color: {c["primary"]};
         selection-color: #ffffff;
         font-size: 13px;
     }}
-    QTableWidget::viewport {{
-        background-color: {c["surface"]};
+    QTableWidget QAbstractScrollArea {{
+        border-radius: 12px;
+        overflow: hidden;
+    }}
+    QTableWidget > QWidget {{
         border-bottom-left-radius: 11px;
         border-bottom-right-radius: 11px;
+        overflow: hidden;
     }}
     QTableWidget::item {{
         padding: 10px 14px;
-        border: none;
+        border-bottom: 1px solid {c["border"]};
     }}
     QTableWidget::item:selected {{
         background-color: {c["primary"]}; color: #ffffff;
